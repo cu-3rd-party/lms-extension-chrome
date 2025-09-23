@@ -27,6 +27,13 @@
             ],
             "js": ["courses_fix.js"],
             "run_at": "document_idle"
+        },
+        {
+            "matches": [
+                "https://my.centraluniversity.ru/*"
+            ],
+            "js": ["tasks_fix.js", "courses_fix.js"],
+            "run_at": "document_idle"
         }
     ],
     "web_accessible_resources": [
