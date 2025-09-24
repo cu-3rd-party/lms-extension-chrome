@@ -15,7 +15,7 @@
             updateTaskStatuses(tasksData);
             
         } catch (error) {
-            //window.cuLmsLog('Task Status Updater: Error:', error);
+            //window.debugLog('Task Status Updater: Error:', error);
         }
     }
     
@@ -62,10 +62,10 @@
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             
             const data = await response.json();
-            window.cuLmsLog('Task Status Updater: Fetched', data.length, 'tasks');
+            window.debugLog('Task Status Updater: Fetched', data.length, 'tasks');
             return data;
         } catch (error) {
-            window.cuLmsLog('Task Status Updater: Failed to fetch tasks:', error);
+            window.debugLog('Task Status Updater: Failed to fetch tasks:', error);
             return [];
         }
     }
@@ -127,8 +127,8 @@
         // ... (код остается прежним) ...
         const statusElements = document.querySelectorAll('.state-chip');
         
-        window.cuLmsLog('Task Status Updater: Found', statusElements.length, 'status elements');
-        window.cuLmsLog('Task Status Updater: Available tasks data:', tasksData);
+        window.debugLog('Task Status Updater: Found', statusElements.length, 'status elements');
+        window.debugLog('Task Status Updater: Available tasks data:', tasksData);
         
         let updatedCount = 0;
         
@@ -136,12 +136,12 @@
             const taskIdOrName = extractTaskIdFromElement(element);
             
             if (taskIdOrName) {
-                window.cuLmsLog(`Task ${index}: Extracted ID/Name -`, taskIdOrName);
+                window.debugLog(`Task ${index}: Extracted ID/Name -`, taskIdOrName);
                 
                 const task = findMatchingTask(taskIdOrName, tasksData);
                 
                 if (task) {
-                    window.cuLmsLog(`Task ${index}: Found matching task -`, task.exercise?.name);
+                    window.debugLog(`Task ${index}: Found matching task -`, task.exercise?.name);
                     
                     if (task.submitAt !== null) {
                         if (element.textContent.includes('В работе')) {
@@ -151,7 +151,7 @@
                             element.setAttribute('data-appearance', 'support-positive');
                             
                             updatedCount++;
-                            window.cuLmsLog(`Task Status Updater: Updated task "${task.exercise?.name}"`);
+                            window.debugLog(`Task Status Updater: Updated task "${task.exercise?.name}"`);
                         }
                     }
                     
@@ -164,14 +164,14 @@
                         }
                     }
                 } else {
-                    window.cuLmsLog(`Task ${index}: No matching task found for`, taskIdOrName);
+                    window.debugLog(`Task ${index}: No matching task found for`, taskIdOrName);
                 }
             } else {
-                window.cuLmsLog(`Task ${index}: Could not extract task ID/name`);
+                window.debugLog(`Task ${index}: Could not extract task ID/name`);
                 
                 const task = tasksData[index];
                 if (task && element.textContent.includes('В работе')) {
-                    window.cuLmsLog(`Task ${index}: Using fallback matching for`, task.exercise?.name);
+                    window.debugLog(`Task ${index}: Using fallback matching for`, task.exercise?.name);
                     
                     if (task.submitAt !== null) {
                         element.textContent = 'Есть решение';
@@ -192,7 +192,7 @@
         });
         
         if (updatedCount > 0) {
-            window.cuLmsLog(`Task Status Updater: Updated ${updatedCount} tasks`);
+            window.debugLog(`Task Status Updater: Updated ${updatedCount} tasks`);
         }
     }
 

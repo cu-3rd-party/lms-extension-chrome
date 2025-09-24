@@ -18,20 +18,41 @@
             "matches": [
                 "https://my.centraluniversity.ru/*"
             ],
-            "js": [
-                "debug_utils.js",
-                "courses_fix.js", 
-                "tasks_fix.js"
+            "js": ["debug_utils.js", "courses_fix.js", "tasks_fix.js", "instant_doc_view_fix.js"]
+        },
+        {
+            "matches": [
+                "https://my.centraluniversity.ru/learn/tasks/*"
             ],
+            "js": ["tasks_fix.js"],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": [
+                "https://my.centraluniversity.ru/learn/courses/view/*"
+            ],
+            "js": ["courses_fix.js"],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": [
+                "https://my.centraluniversity.ru/*"
+            ],
+            "js": ["tasks_fix.js", "courses_fix.js"],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": [
+                "https://my.centraluniversity.ru/learn/*/longreads/*"
+            ],
+            "js": ["instant_doc_view_fix.js"],
             "run_at": "document_idle"
         }
     ],
     "web_accessible_resources": [
         {
-            "resources": [
-                "icons/*.svg", 
-                "icons/*.png"
-            ],
+            "resources": ["icons/*.svg", "icons/*.png", "tasks_fix.js", "courses_fix.js",
+        "debug_utils.js", "instant_doc_view_fix.js"],
             "matches": ["<all_urls>"]
         }
     ]
