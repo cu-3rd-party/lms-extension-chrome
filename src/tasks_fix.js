@@ -2,8 +2,6 @@
 (async function() {
     'use strict';
     
-    const DEBUG = false;
-    
     // Основная функция, которая запускает весь процесс
     async function runLogic() {
         try {
@@ -17,7 +15,7 @@
             updateTaskStatuses(tasksData);
             
         } catch (error) {
-            console.log('Task Status Updater: Error:', error);
+            //window.debugLog('Task Status Updater: Error:', error);
         }
     }
     
@@ -64,20 +62,11 @@
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             
             const data = await response.json();
-            debugLog('Task Status Updater: Fetched', data.length, 'tasks');
+            window.debugLog('Task Status Updater: Fetched', data.length, 'tasks');
             return data;
         } catch (error) {
-            console.log('Task Status Updater: Failed to fetch tasks:', error);
+            window.debugLog('Task Status Updater: Failed to fetch tasks:', error);
             return [];
-        }
-    }
-    
-    // Остальные функции (debugLog, extractTaskIdFromElement, findMatchingTask, updateTaskStatuses, waitForElement)
-    // остаются без изменений
-    
-    function debugLog(...args) {
-        if (DEBUG) {
-            console.log(...args);
         }
     }
 
@@ -138,8 +127,8 @@
         // ... (код остается прежним) ...
         const statusElements = document.querySelectorAll('.state-chip');
         
-        debugLog('Task Status Updater: Found', statusElements.length, 'status elements');
-        debugLog('Task Status Updater: Available tasks data:', tasksData);
+        window.debugLog('Task Status Updater: Found', statusElements.length, 'status elements');
+        window.debugLog('Task Status Updater: Available tasks data:', tasksData);
         
         let updatedCount = 0;
         
@@ -147,12 +136,12 @@
             const taskIdOrName = extractTaskIdFromElement(element);
             
             if (taskIdOrName) {
-                debugLog(`Task ${index}: Extracted ID/Name -`, taskIdOrName);
+                window.debugLog(`Task ${index}: Extracted ID/Name -`, taskIdOrName);
                 
                 const task = findMatchingTask(taskIdOrName, tasksData);
                 
                 if (task) {
-                    debugLog(`Task ${index}: Found matching task -`, task.exercise?.name);
+                    window.debugLog(`Task ${index}: Found matching task -`, task.exercise?.name);
                     
                     if (task.submitAt !== null) {
                         if (element.textContent.includes('В работе')) {
@@ -162,7 +151,7 @@
                             element.setAttribute('data-appearance', 'support-positive');
                             
                             updatedCount++;
-                            debugLog(`Task Status Updater: Updated task "${task.exercise?.name}"`);
+                            window.debugLog(`Task Status Updater: Updated task "${task.exercise?.name}"`);
                         }
                     }
                     
@@ -175,14 +164,14 @@
                         }
                     }
                 } else {
-                    debugLog(`Task ${index}: No matching task found for`, taskIdOrName);
+                    window.debugLog(`Task ${index}: No matching task found for`, taskIdOrName);
                 }
             } else {
-                debugLog(`Task ${index}: Could not extract task ID/name`);
+                window.debugLog(`Task ${index}: Could not extract task ID/name`);
                 
                 const task = tasksData[index];
                 if (task && element.textContent.includes('В работе')) {
-                    debugLog(`Task ${index}: Using fallback matching for`, task.exercise?.name);
+                    window.debugLog(`Task ${index}: Using fallback matching for`, task.exercise?.name);
                     
                     if (task.submitAt !== null) {
                         element.textContent = 'Есть решение';
@@ -203,7 +192,7 @@
         });
         
         if (updatedCount > 0) {
-            console.log(`Task Status Updater: Updated ${updatedCount} tasks`);
+            window.debugLog(`Task Status Updater: Updated ${updatedCount} tasks`);
         }
     }
 
