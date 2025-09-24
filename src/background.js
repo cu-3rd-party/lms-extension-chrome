@@ -23,4 +23,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 });
 
-console.log('CU LMS Enhancer Service Worker Loaded');
+console.log('[CU LMS Enhancer]: Service Worker Loaded');

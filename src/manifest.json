@@ -16,6 +16,12 @@
     "content_scripts": [
         {
             "matches": [
+                "https://my.centraluniversity.ru/*"
+            ],
+            "js": ["debug_utils.js"]
+        },
+        {
+            "matches": [
                 "https://my.centraluniversity.ru/learn/tasks/*"
             ],
             "js": ["tasks_fix.js"],
@@ -38,7 +44,8 @@
     ],
     "web_accessible_resources": [
         {
-            "resources": ["icons/*.svg", "icons/*.png", "tasks_fix.js", "courses_fix.js"],
+            "resources": ["icons/*.svg", "icons/*.png", "tasks_fix.js", "courses_fix.js",
+        "debug_utils.js"],
             "matches": ["<all_urls>"]
         }
     ]
