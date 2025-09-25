@@ -1,12 +1,5 @@
 // courses_fix.js
 
-// В самом начале файла
-if (typeof window.cuLmsLog !== 'function') {
-    window.cuLmsLog = function(...args) {
-        console.log('[CU LMS Enhancer]:', ...args);
-    };
-}
-
 // Используйте везде в файле
 
 (async function() {
@@ -96,7 +89,7 @@ if (typeof window.cuLmsLog !== 'function') {
             // Устанавливаем интервал для периодического обновления состояния
             renderIntervalId = setInterval(renderCoursesBasedOnState, 15000);
         } catch (error) {
-            console.warn('Course Archiver: Failed to initialize on courses page:', error);
+            window.cuLmsLog('Course Archiver: Failed to initialize on courses page:', error);
             // В случае ошибки, также очищаем, чтобы не висели старые ссылки
             if (renderIntervalId) clearInterval(renderIntervalId);
             if (pageObserver) pageObserver.disconnect();
@@ -123,7 +116,7 @@ if (typeof window.cuLmsLog !== 'function') {
             window.cuLmsLog(`Course Archiver: Fetched ${allCourses.length} total courses from API.`);
             return allCourses;
         } catch (error) {
-            console.error(`Course Archiver: Failed to fetch all courses:`, error);
+            window.cuLmsLog(`Course Archiver: Failed to fetch all courses:`, error);
             return [];
         }
     }
@@ -137,7 +130,7 @@ if (typeof window.cuLmsLog !== 'function') {
             }
             chrome.runtime.sendMessage({ action: "getStorage", keys: ['archivedCourseIds'] }, (response) => {
                 if (chrome.runtime.lastError || response.error) {
-                    console.warn('Course Archiver: Error getting archivedCourseIds from storage:', chrome.runtime.lastError || response.error);
+                    window.cuLmsLog('Course Archiver: Error getting archivedCourseIds from storage:', chrome.runtime.lastError || response.error);
                     resolve(new Set());
                 } else {
                     resolve(new Set(response.archivedCourseIds || []));
@@ -155,7 +148,7 @@ if (typeof window.cuLmsLog !== 'function') {
             }
             chrome.runtime.sendMessage({ action: "setStorage", items: { archivedCourseIds: Array.from(archivedCourseIds) } }, (response) => {
                 if (chrome.runtime.lastError || response.error) {
-                    console.warn('Course Archiver: Error saving archivedCourseIds to storage:', chrome.runtime.lastError || response.error);
+                    window.cuLmsLog('Course Archiver: Error saving archivedCourseIds to storage:', chrome.runtime.lastError || response.error);
                 } else {
                     window.cuLmsLog('Course Archiver: Saved archivedCourseIds to storage:', Array.from(archivedCourseIds));
                 }
@@ -500,7 +493,7 @@ if (typeof window.cuLmsLog !== 'function') {
                 resolve();
             };
             script.onerror = (e) => {
-                console.error(`Failed to inject script ${scriptName}:`, e);
+                window.cuLmsLog(`Failed to inject script ${scriptName}:`, e);
                 reject(e);
             };
             document.head.appendChild(script);

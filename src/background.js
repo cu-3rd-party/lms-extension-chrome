@@ -3,7 +3,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "getStorage") {
         chrome.storage.local.get(request.keys, (result) => {
             if (chrome.runtime.lastError) {
-                console.error("Error getting storage:", chrome.runtime.lastError);
+                console.log("Error getting storage:", chrome.runtime.lastError);
                 sendResponse({ error: chrome.runtime.lastError.message });
             } else {
                 sendResponse(result);
@@ -13,7 +13,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     } else if (request.action === "setStorage") {
         chrome.storage.local.set(request.items, () => {
             if (chrome.runtime.lastError) {
-                console.error("Error setting storage:", chrome.runtime.lastError);
+                console.log("Error setting storage:", chrome.runtime.lastError);
                 sendResponse({ error: chrome.runtime.lastError.message });
             } else {
                 sendResponse({ success: true });
