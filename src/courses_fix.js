@@ -1,8 +1,11 @@
 // courses_fix.js
+
+// Используйте везде в файле
+
 (async function() {
     'use strict';
     
-    window.debugLog('Course Archiver: Extension loaded');
+    window.cuLmsLog('Course Archiver: Extension loaded');
     
     const API_BASE_URL = 'https://my.centraluniversity.ru/api/micro-lms';
     const COURSE_ACTIVE_URL_PART = '/learn/courses/view/actual';
@@ -26,7 +29,7 @@
     
     // Главная функция инициализации и отслеживания изменений URL
     function init() {
-        window.debugLog('Course Archiver: Initializing...');
+        window.cuLmsLog('Course Archiver: Initializing...');
         currentObservedPath = window.location.pathname; 
         handlePageLoad(); // Вызываем обработчик для текущего URL
 
@@ -35,7 +38,7 @@
             let lastPathname = window.location.pathname;
             urlObserver = new MutationObserver(() => {
                 if (window.location.pathname !== lastPathname) {
-                    window.debugLog('Course Archiver: URL changed. Re-initializing.');
+                    window.cuLmsLog('Course Archiver: URL changed. Re-initializing.');
                     lastPathname = window.location.pathname;
                     currentObservedPath = lastPathname;
                     handlePageLoad(); // Перезапускаем обработку при смене URL
@@ -61,15 +64,15 @@
         }
 
         if (currentPath.startsWith(COURSE_ACTIVE_URL_PART) || currentPath.startsWith(COURSE_ARCHIVED_URL_PART)) {
-            window.debugLog('Course Archiver: On courses page. Starting course processing.');
+            window.cuLmsLog('Course Archiver: On courses page. Starting course processing.');
             initializeCourseArchiver();
         } else if (currentPath.startsWith(TASKS_URL_PART)) {
-            window.debugLog('Course Archiver: On tasks page. Injecting tasks_fix.js');
+            window.cuLmsLog('Course Archiver: On tasks page. Injecting tasks_fix.js');
             // Инжектируем tasks_fix.js если мы на странице задач
             await injectScript('tasks_fix.js');
             // Очищаем все, что относится к курсам, если мы перешли на задачи
         } else {
-            window.debugLog('Course Archiver: Not on a known functional page. Cleaning up timers and observers.');
+            window.cuLmsLog('Course Archiver: Not on a known functional page. Cleaning up timers and observers.');
         }
     }
 
@@ -86,7 +89,7 @@
             // Устанавливаем интервал для периодического обновления состояния
             renderIntervalId = setInterval(renderCoursesBasedOnState, 15000);
         } catch (error) {
-            console.warn('Course Archiver: Failed to initialize on courses page:', error);
+            window.cuLmsLog('Course Archiver: Failed to initialize on courses page:', error);
             // В случае ошибки, также очищаем, чтобы не висели старые ссылки
             if (renderIntervalId) clearInterval(renderIntervalId);
             if (pageObserver) pageObserver.disconnect();
@@ -110,10 +113,10 @@
             archivedCourses.forEach(course => allCoursesMap.set(course.id, course));
 
             const allCourses = Array.from(allCoursesMap.values());
-            window.debugLog(`Course Archiver: Fetched ${allCourses.length} total courses from API.`);
+            window.cuLmsLog(`Course Archiver: Fetched ${allCourses.length} total courses from API.`);
             return allCourses;
         } catch (error) {
-            console.error(`Course Archiver: Failed to fetch all courses:`, error);
+            window.cuLmsLog(`Course Archiver: Failed to fetch all courses:`, error);
             return [];
         }
     }
@@ -122,12 +125,12 @@
     async function getArchivedCoursesFromStorage() {
         return new Promise((resolve) => {
             if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
-                window.debugLog('Course Archiver: chrome.runtime.sendMessage not available, returning empty set.');
+                window.cuLmsLog('Course Archiver: chrome.runtime.sendMessage not available, returning empty set.');
                 return resolve(new Set());
             }
             chrome.runtime.sendMessage({ action: "getStorage", keys: ['archivedCourseIds'] }, (response) => {
                 if (chrome.runtime.lastError || response.error) {
-                    console.warn('Course Archiver: Error getting archivedCourseIds from storage:', chrome.runtime.lastError || response.error);
+                    window.cuLmsLog('Course Archiver: Error getting archivedCourseIds from storage:', chrome.runtime.lastError || response.error);
                     resolve(new Set());
                 } else {
                     resolve(new Set(response.archivedCourseIds || []));
@@ -140,14 +143,14 @@
     async function setArchivedCoursesInStorage(archivedCourseIds) {
         return new Promise((resolve) => {
             if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
-                window.debugLog('Course Archiver: chrome.runtime.sendMessage not available, cannot save.');
+                window.cuLmsLog('Course Archiver: chrome.runtime.sendMessage not available, cannot save.');
                 return resolve();
             }
             chrome.runtime.sendMessage({ action: "setStorage", items: { archivedCourseIds: Array.from(archivedCourseIds) } }, (response) => {
                 if (chrome.runtime.lastError || response.error) {
-                    console.warn('Course Archiver: Error saving archivedCourseIds to storage:', chrome.runtime.lastError || response.error);
+                    window.cuLmsLog('Course Archiver: Error saving archivedCourseIds to storage:', chrome.runtime.lastError || response.error);
                 } else {
-                    window.debugLog('Course Archiver: Saved archivedCourseIds to storage:', Array.from(archivedCourseIds));
+                    window.cuLmsLog('Course Archiver: Saved archivedCourseIds to storage:', Array.from(archivedCourseIds));
                 }
                 resolve();
             });
@@ -158,7 +161,7 @@
     async function renderCoursesBasedOnState() {
         const courseListContainer = await waitForElement('ul.course-list', 5000);
         if (!courseListContainer) {
-            window.debugLog('Course Archiver: Course list container not found during render.');
+            window.cuLmsLog('Course Archiver: Course list container not found during render.');
             return;
         }
 
@@ -167,7 +170,7 @@
         const isOnActivePage = currentPath.startsWith(COURSE_ACTIVE_URL_PART);
 
         if (!isOnActivePage && !isOnArchivedPage) {
-            window.debugLog('Course Archiver: Not on an active or archived courses page during render, skipping.');
+            window.cuLmsLog('Course Archiver: Not on an active or archived courses page during render, skipping.');
             return;
         }
 
@@ -249,7 +252,7 @@
             }
         }
         
-        window.debugLog('Course Archiver: Finished rendering courses.');
+        window.cuLmsLog('Course Archiver: Finished rendering courses.');
     }
 
     // Функция для извлечения ID курса из DOM-элемента <li>
@@ -305,7 +308,7 @@
             }
         } else {
             // Fallback к вашей текущей реализации, если нет шаблона для клонирования
-            window.debugLog('Course Archiver: No template LI found for cloning. Creating basic card.');
+            window.cuLmsLog('Course Archiver: No template LI found for cloning. Creating basic card.');
             newLi = document.createElement('li');
             newLi.className = 'course-list__item extension-created-card';
             newLi.setAttribute('data-course-id', courseData.id);
@@ -380,10 +383,10 @@
                 
                 if (currentArchivedCourseIds.has(courseId)) {
                     currentArchivedCourseIds.delete(courseId);
-                    window.debugLog('Course Archiver: Removed course ID', courseId, 'from archived (local).');
+                    window.cuLmsLog('Course Archiver: Removed course ID', courseId, 'from archived (local).');
                 } else {
                     currentArchivedCourseIds.add(courseId);
-                    window.debugLog('Course Archiver: Added course ID', courseId, 'to archived (local).');
+                    window.cuLmsLog('Course Archiver: Added course ID', courseId, 'to archived (local).');
                 }
                 
                 await setArchivedCoursesInStorage(currentArchivedCourseIds);
@@ -458,7 +461,7 @@
             }
             
             if (shouldUpdate) {
-                window.debugLog('Course Archiver: Detected page changes, re-rendering courses...');
+                window.cuLmsLog('Course Archiver: Detected page changes, re-rendering courses...');
                 setTimeout(() => callbackFn(), 500); // Задержка для полного рендеринга
             }
         });
@@ -468,16 +471,17 @@
             childList: true,
             subtree: true
         });
-        window.debugLog('Course Archiver: Started observing page changes.');
+        window.cuLmsLog('Course Archiver: Started observing page changes.');
         return obs; // Возвращаем observer, чтобы его можно было остановить
     }
 
     // Вспомогательная функция для инъекции скриптов
     async function injectScript(scriptName) {
+        return; // currently disabled, google ToS issues
         const scriptUrl = chrome.runtime.getURL(scriptName);
         // Проверяем, был ли скрипт уже инжектирован
         if (document.head.querySelector(`script[src="${scriptUrl}"]`)) {
-            window.debugLog(`Script ${scriptName} already injected.`);
+            window.cuLmsLog(`Script ${scriptName} already injected.`);
             return;
         }
 
@@ -485,11 +489,11 @@
             const script = document.createElement('script');
             script.src = scriptUrl;
             script.onload = () => {
-                window.debugLog(`Script ${scriptName} injected and loaded.`);
+                window.cuLmsLog(`Script ${scriptName} injected and loaded.`);
                 resolve();
             };
             script.onerror = (e) => {
-                console.error(`Failed to inject script ${scriptName}:`, e);
+                window.cuLmsLog(`Failed to inject script ${scriptName}:`, e);
                 reject(e);
             };
             document.head.appendChild(script);
