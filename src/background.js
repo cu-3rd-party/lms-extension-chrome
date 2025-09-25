@@ -22,5 +22,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true; // Indicates an asynchronous response
     }
 });
+// background.js
 
+// background.js
+
+// background.js
+
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+    if (request.action === "openNewTab" && request.url) {
+        chrome.tabs.create({ url: request.url });
+        // Для открытия вкладки нет необходимости в sendResponse, если не нужна специфическая обратная связь.
+    }
+    // Логика для "downloadFile" удалена, так как она больше не используется content.js
+});
 console.log('[CU LMS Enhancer]: Service Worker Loaded');
