@@ -477,7 +477,10 @@
 
     // Вспомогательная функция для инъекции скриптов
     async function injectScript(scriptName) {
-        return; // currently disabled, google ToS issues
+        //return;
+         // currently disabled, google ToS issues
+         // upd: currently enabled
+         // FIXME: right order of script injecting by manifest!
         const scriptUrl = chrome.runtime.getURL(scriptName);
         // Проверяем, был ли скрипт уже инжектирован
         if (document.head.querySelector(`script[src="${scriptUrl}"]`)) {

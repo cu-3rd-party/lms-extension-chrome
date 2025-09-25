@@ -15,7 +15,7 @@
             updateTaskStatuses(tasksData);
             
         } catch (error) {
-            //window.debugLog('Task Status Updater: Error:', error);
+            window.cuLmsLog('Task Status Updater: Error:', error); // Логирование остается
         }
     }
     
@@ -32,7 +32,7 @@
         let shouldRun = false;
         for (const mutation of mutations) {
             if (mutation.addedNodes.length) {
-                // Проверяем, появились ли новые элементы с .state-chip
+                // Проверяем, появились ли новые элементы с .task-table
                 for (const node of mutation.addedNodes) {
                     if (node.nodeType === 1 && node.querySelector && node.querySelector('.task-table')) {
                         shouldRun = true;
@@ -62,137 +62,139 @@
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             
             const data = await response.json();
-            window.debugLog('Task Status Updater: Fetched', data.length, 'tasks');
+            window.cuLmsLog('Task Status Updater: Fetched', data.length, 'tasks'); // Логирование остается
             return data;
         } catch (error) {
-            window.debugLog('Task Status Updater: Failed to fetch tasks:', error);
+            window.cuLmsLog('Task Status Updater: Failed to fetch tasks:', error); // Логирование остается
             return [];
         }
     }
 
-    function extractTaskIdFromElement(element) {
-        // ... (код остается прежним) ...
-        const dataTaskId = element.closest('[data-task-id]');
-        if (dataTaskId) return dataTaskId.getAttribute('data-task-id');
+    /**
+     * Извлекает название задания и название курса из элемента HTML.
+     * @param {HTMLElement} element Элемент, представляющий статус задачи или родительский элемент.
+     * @returns {{taskName: string|null, courseName: string|null}|null} Объект с именами, или null, если не найдено.
+     */
+    function extractTaskAndCourseNamesFromElement(element) {
+        const taskRow = element.closest('tr[class*="task-table__task"], .task-item, .task-row');
+        if (!taskRow) return null;
+
+        const taskNameElement = taskRow.querySelector('.task-table__task-name, .task-name, .exercise-name, [class*="task-name"]');
+        const courseNameElement = taskRow.querySelector('.task-table__course-name, .course-name, [class*="course-name"]');
+
+        const taskName = taskNameElement ? taskNameElement.textContent.trim() : null;
+        const courseName = courseNameElement ? courseNameElement.textContent.trim() : null;
         
-        const parentWithId = element.closest('[id*="task"]');
-        if (parentWithId && parentWithId.id) return parentWithId.id;
-        
-        const taskLink = element.closest('a[href*="task"]') || element.querySelector('a[href*="task"]');
-        if (taskLink && taskLink.href) {
-            const match = taskLink.href.match(/task[_-]?(\d+)/i);
-            if (match) return match[1];
-        }
-        
-        const taskRow = element.closest('tr, .task-item, .task-row');
-        if (taskRow) {
-            const taskNameElement = taskRow.querySelector('.task-name, .exercise-name, [class*="name"]');
-            if (taskNameElement) {
-                return taskNameElement.textContent.trim();
-            }
-        }
-        
-        return null;
+        // Возвращаем объект, чтобы было ясно, что мы ищем
+        return { taskName, courseName };
     }
 
-    function findMatchingTask(taskIdOrName, tasksData) {
-        // ... (код остается прежним) ...
-        if (!taskIdOrName) return null;
-        
-        const taskById = tasksData.find(task => 
-            task.id === taskIdOrName || 
-            task.exercise?.id === taskIdOrName ||
-            task.taskId === taskIdOrName
-        );
-        if (taskById) return taskById;
-        
-        const taskByName = tasksData.find(task => 
-            task.exercise?.name && 
-            task.exercise.name.toLowerCase().includes(taskIdOrName.toLowerCase())
-        );
-        if (taskByName) return taskByName;
-        
-        if (typeof taskIdOrName === 'string') {
-            const partialMatch = tasksData.find(task => 
-                task.exercise?.name && 
-                taskIdOrName.toLowerCase().includes(task.exercise.name.toLowerCase())
-            );
-            if (partialMatch) return partialMatch;
-        }
-        
-        return null;
+    /**
+     * Находит соответствующую задачу в массиве данных из API, сравнивая по названию курса и названию задания.
+     * @param {{taskName: string|null, courseName: string|null}} htmlNames Объект с названиями из HTML.
+     * @param {Array<Object>} tasksData Массив объектов задач из API.
+     * @returns {Object|null} Найденный объект задачи, или null, если не найдено.
+     */
+    function findMatchingTask(htmlNames, tasksData) {
+        const { taskName: htmlTaskName, courseName: htmlCourseName } = htmlNames;
+
+        if (!htmlTaskName || !htmlCourseName) return null; // Оба названия должны присутствовать для сравнения
+
+        const normalizedHtmlTaskName = htmlTaskName.toLowerCase().trim();
+        const normalizedHtmlCourseName = htmlCourseName.toLowerCase().trim();
+
+        // Ищем точное совпадение по названию задания И названию курса
+        const matchedTask = tasksData.find(task => {
+            const apiTaskName = task.exercise?.name ? task.exercise.name.toLowerCase().trim() : '';
+            const apiCourseName = task.course?.name ? task.course.name.toLowerCase().trim() : '';
+
+            // Точное совпадение
+            return apiTaskName === normalizedHtmlTaskName &&
+                   apiCourseName === normalizedHtmlCourseName;
+        });
+
+        if (matchedTask) return matchedTask;
+
+        // Если точное совпадение не найдено, можно добавить частичное, если это необходимо
+        // Например: HTML: "ДЗ 1. Git & GitLab", API: "Git & GitLab"
+        // HTML: "Основы разработки на Go", API: "Основы разработки на Go (лекции)"
+
+        // Частичное совпадение: HTML-название задания содержится в API-названии задания, И HTML-название курса содержится в API-названии курса
+        // Или наоборот, если API-название содержится в HTML-названии.
+        // Это более гибкий подход, но "точно" означает, скорее всего, точное совпадение.
+        // Если "точно" - это 100% совпадение строк, то оставляем только `matchedTask` выше.
+        // Но для реальных данных часто бывают небольшие расхождения, поэтому я предложу более гибкий вариант как запасной.
+
+        const partialMatchedTask = tasksData.find(task => {
+            const apiTaskName = task.exercise?.name ? task.exercise.name.toLowerCase().trim() : '';
+            const apiCourseName = task.course?.name ? task.course.name.toLowerCase().trim() : '';
+
+            const taskNameMatches = (apiTaskName === normalizedHtmlTaskName) || // Точное совпадение
+                                    (apiTaskName.includes(normalizedHtmlTaskName) && normalizedHtmlTaskName.length > 3) || // HTML-имя в API-имени
+                                    (normalizedHtmlTaskName.includes(apiTaskName) && apiTaskName.length > 3); // API-имя в HTML-имени
+
+            const courseNameMatches = (apiCourseName === normalizedHtmlCourseName) || // Точное совпадение
+                                      (apiCourseName.includes(normalizedHtmlCourseName) && normalizedHtmlCourseName.length > 3) || // HTML-имя в API-имени
+                                      (normalizedHtmlCourseName.includes(apiCourseName) && apiCourseName.length > 3); // API-имя в HTML-имени
+            
+            return taskNameMatches && courseNameMatches;
+        });
+
+        return partialMatchedTask; // Возвращаем либо точное, либо частичное совпадение
     }
 
     function updateTaskStatuses(tasksData) {
-        // ... (код остается прежним) ...
         const statusElements = document.querySelectorAll('.state-chip');
         
-        window.debugLog('Task Status Updater: Found', statusElements.length, 'status elements');
-        window.debugLog('Task Status Updater: Available tasks data:', tasksData);
+        window.cuLmsLog('Task Status Updater: Found', statusElements.length, 'status elements'); // Логирование остается
         
         let updatedCount = 0;
         
         statusElements.forEach((element, index) => {
-            const taskIdOrName = extractTaskIdFromElement(element);
+            const htmlNames = extractTaskAndCourseNamesFromElement(element);
             
-            if (taskIdOrName) {
-                window.debugLog(`Task ${index}: Extracted ID/Name -`, taskIdOrName);
+            if (htmlNames && htmlNames.taskName && htmlNames.courseName) {
+                window.cuLmsLog(`Task ${index}: Extracted names - Task: "${htmlNames.taskName}", Course: "${htmlNames.courseName}"`); // Логирование остается
                 
-                const task = findMatchingTask(taskIdOrName, tasksData);
+                const task = findMatchingTask(htmlNames, tasksData);
                 
                 if (task) {
-                    window.debugLog(`Task ${index}: Found matching task -`, task.exercise?.name);
+                    window.cuLmsLog(`Task ${index}: Found matching task - "${task.exercise?.name}" in "${task.course?.name}"`); // Логирование остается
                     
+                    // Обновляем статус, если задача уже была отправлена (submitAt не null)
                     if (task.submitAt !== null) {
                         if (element.textContent.includes('В работе')) {
                             element.textContent = 'Есть решение';
-                            element.style.backgroundColor = '#4CAF50';
+                            element.style.backgroundColor = '#4CAF50'; // Зеленый
                             element.style.color = 'white';
                             element.setAttribute('data-appearance', 'support-positive');
                             
                             updatedCount++;
-                            window.debugLog(`Task Status Updater: Updated task "${task.exercise?.name}"`);
+                            window.cuLmsLog(`Task Status Updater: Updated task "${task.exercise?.name}" to "Есть решение"`); // Логирование остается
                         }
                     }
                     
+                    // Обновляем статус, если задача находится на оценке или ревью
                     if (task.state === 'evaluated' || task.state === 'review') {
                         if (element.textContent.includes('В работе') || element.textContent.includes('Есть решение')) {
                             element.textContent = 'Проверяется';
-                            element.style.backgroundColor = '#FF9800';
+                            element.style.backgroundColor = '#FF9800'; // Оранжевый
                             element.style.color = 'white';
+                            element.setAttribute('data-appearance', 'support-warning');
                             updatedCount++;
+                            window.cuLmsLog(`Task Status Updater: Updated task "${task.exercise?.name}" to "Проверяется"`); // Логирование остается
                         }
                     }
                 } else {
-                    window.debugLog(`Task ${index}: No matching task found for`, taskIdOrName);
+                    window.cuLmsLog(`Task ${index}: No matching task found for HTML names Task: "${htmlNames.taskName}", Course: "${htmlNames.courseName}"`); // Логирование остается
                 }
             } else {
-                window.debugLog(`Task ${index}: Could not extract task ID/name`);
-                
-                const task = tasksData[index];
-                if (task && element.textContent.includes('В работе')) {
-                    window.debugLog(`Task ${index}: Using fallback matching for`, task.exercise?.name);
-                    
-                    if (task.submitAt !== null) {
-                        element.textContent = 'Есть решение';
-                        element.style.backgroundColor = '#4CAF50';
-                        element.style.color = 'white';
-                        element.setAttribute('data-appearance', 'support-positive');
-                        updatedCount++;
-                    }
-                    
-                    if (task.state === 'evaluated' || task.state === 'review') {
-                        element.textContent = 'Проверяется';
-                        element.style.backgroundColor = '#FF9800';
-                        element.style.color = 'white';
-                        updatedCount++;
-                    }
-                }
+                window.cuLmsLog(`Task ${index}: Could not extract task and/or course name for element`, element); // Логирование остается
             }
         });
         
         if (updatedCount > 0) {
-            window.debugLog(`Task Status Updater: Updated ${updatedCount} tasks`);
+            window.cuLmsLog(`Task Status Updater: Updated ${updatedCount} tasks`); // Логирование остается
         }
     }
 
@@ -223,7 +225,4 @@
             }, timeout);
         });
     }
-
-    // Убрал setInterval, так как MutationObserver и так отлично справляется.
-    // Если нужно, можно добавить его обратно, но он не решает проблему навигации.
 })();
