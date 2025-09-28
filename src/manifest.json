@@ -18,7 +18,8 @@
             "matches": [
                 "https://my.centraluniversity.ru/*"
             ],
-            "js": ["debug_utils.js", "courses_fix.js", "tasks_fix.js", "instant_doc_view_fix.js"]
+            "js": ["debug_utils.js", "courses_fix.js", "tasks_fix.js", "instant_doc_view_fix.js", "dark_theme.js"],
+            "css": ["style.css"]
         },
         {
             "matches": [
@@ -52,7 +53,7 @@
     "web_accessible_resources": [
         {
             "resources": ["icons/*.svg", "icons/*.png", "tasks_fix.js", "courses_fix.js",
-        "debug_utils.js", "instant_doc_view_fix.js"],
+        "debug_utils.js", "instant_doc_view_fix.js", "style.css", "dark_theme.js"],
             "matches": ["<all_urls>"]
         }
     ]
