@@ -5,8 +5,12 @@
     "description": "Добавляет функционал архивации курсов и обновления статусов задач.",
     "permissions": [
         "activeTab",
-        "storage"
+        "storage",
+        "scripting"
     ],
+    "action": {
+    "default_popup": "popup.html"
+    },
     "host_permissions": [
         "https://my.centraluniversity.ru/*" 
     ],
@@ -14,6 +18,11 @@
         "service_worker": "background.js"
     },
     "content_scripts": [
+        {
+      "matches": ["https://my.centraluniversity.ru/*"],
+      "js": ["dark_theme.js"],
+      "run_at": "document_end"
+    },
         {
             "matches": [
                 "https://my.centraluniversity.ru/*"
@@ -52,7 +61,8 @@
     "web_accessible_resources": [
         {
             "resources": ["icons/*.svg", "icons/*.png", "tasks_fix.js", "courses_fix.js",
-        "debug_utils.js", "instant_doc_view_fix.js"],
+        "debug_utils.js", "instant_doc_view_fix.js", "style.css", "dark_theme.js", 
+    "icons/sun.svg", "icons/moon.svg"],
             "matches": ["<all_urls>"]
         }
     ]

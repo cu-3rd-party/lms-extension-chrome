@@ -35,4 +35,13 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     }
     // Логика для "downloadFile" удалена, так как она больше не используется content.js
 });
+
+chrome.runtime.onInstalled.addListener(() => {
+  // Устанавливаем, что по умолчанию тема выключена
+  chrome.storage.sync.get('themeEnabled', (data) => {
+    if (typeof data.themeEnabled === 'undefined') {
+      chrome.storage.sync.set({ themeEnabled: false });
+    }
+  });
+});
 console.log('[CU LMS Enhancer]: Service Worker Loaded');
