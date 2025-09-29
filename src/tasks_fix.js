@@ -1,72 +1,34 @@
 // Простой и эффективный content script
-(async function() {
+(function() {
     'use strict';
-    
+
     // Основная функция, которая запускает весь процесс
     async function runLogic() {
         try {
             // Ждем появления таблиц с задачами
             await waitForElement('.task-table');
-            
             // Получаем актуальные данные задач
             const tasksData = await fetchTasksData();
-            
             // Обновляем статусы на странице
             updateTaskStatuses(tasksData);
-            
         } catch (error) {
-            window.cuLmsLog('Task Status Updater: Error:', error); // Логирование остается
+            console.error('Task Status Updater: Error:', error); // Используем console.error для лучшего отслеживания
         }
     }
-    
-    // Запускаем логику при первой загрузке
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', runLogic);
-    } else {
-        setTimeout(runLogic, 1000);
-    }
-
-    // Создаем MutationObserver для отслеживания изменений в DOM
-    // Это будет работать для SPA-навигации
-    const observer = new MutationObserver((mutations) => {
-        let shouldRun = false;
-        for (const mutation of mutations) {
-            if (mutation.addedNodes.length) {
-                // Проверяем, появились ли новые элементы с .task-table
-                for (const node of mutation.addedNodes) {
-                    if (node.nodeType === 1 && node.querySelector && node.querySelector('.task-table')) {
-                        shouldRun = true;
-                        break;
-                    }
-                }
-            }
-            if (shouldRun) break;
-        }
-
-        if (shouldRun) {
-            // Запускаем логику снова с задержкой, чтобы дать странице полностью загрузиться
-            setTimeout(runLogic, 500);
-        }
-    });
-
-    // Начинаем наблюдение за изменениями в document.body
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
 
     // Функция получения данных задач
     async function fetchTasksData() {
         try {
             const response = await fetch('https://my.centraluniversity.ru/api/micro-lms/tasks/student');
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             const data = await response.json();
-            window.cuLmsLog('Task Status Updater: Fetched', data.length, 'tasks'); // Логирование остается
+            console.log('Task Status Updater: Fetched', data.length, 'tasks');
             return data;
         } catch (error) {
-            window.cuLmsLog('Task Status Updater: Failed to fetch tasks:', error); // Логирование остается
-            return [];
+            console.error('Task Status Updater: Failed to fetch tasks:', error);
+            return []; // Возвращаем пустой массив в случае ошибки
         }
     }
 
@@ -84,120 +46,111 @@
 
         const taskName = taskNameElement ? taskNameElement.textContent.trim() : null;
         const courseName = courseNameElement ? courseNameElement.textContent.trim() : null;
-        
-        // Возвращаем объект, чтобы было ясно, что мы ищем
+
         return { taskName, courseName };
     }
 
     /**
-     * Находит соответствующую задачу в массиве данных из API, сравнивая по названию курса и названию задания.
+     * Находит соответствующую задачу в массиве данных из API.
      * @param {{taskName: string|null, courseName: string|null}} htmlNames Объект с названиями из HTML.
      * @param {Array<Object>} tasksData Массив объектов задач из API.
-     * @returns {Object|null} Найденный объект задачи, или null, если не найдено.
+     * @returns {Object|null} Найденный объект задачи, или null.
      */
     function findMatchingTask(htmlNames, tasksData) {
         const { taskName: htmlTaskName, courseName: htmlCourseName } = htmlNames;
-
-        if (!htmlTaskName || !htmlCourseName) return null; // Оба названия должны присутствовать для сравнения
+        if (!htmlTaskName || !htmlCourseName) return null;
 
         const normalizedHtmlTaskName = htmlTaskName.toLowerCase().trim();
         const normalizedHtmlCourseName = htmlCourseName.toLowerCase().trim();
 
-        // Ищем точное совпадение по названию задания И названию курса
-        const matchedTask = tasksData.find(task => {
-            const apiTaskName = task.exercise?.name ? task.exercise.name.toLowerCase().trim() : '';
-            const apiCourseName = task.course?.name ? task.course.name.toLowerCase().trim() : '';
-
-            // Точное совпадение
-            return apiTaskName === normalizedHtmlTaskName &&
-                   apiCourseName === normalizedHtmlCourseName;
+        // 1. Поиск точного совпадения
+        let matchedTask = tasksData.find(task => {
+            const apiTaskName = task.exercise?.name?.toLowerCase().trim() || '';
+            const apiCourseName = task.course?.name?.toLowerCase().trim() || '';
+            return apiTaskName === normalizedHtmlTaskName && apiCourseName === normalizedHtmlCourseName;
         });
 
         if (matchedTask) return matchedTask;
 
-        // Если точное совпадение не найдено, можно добавить частичное, если это необходимо
-        // Например: HTML: "ДЗ 1. Git & GitLab", API: "Git & GitLab"
-        // HTML: "Основы разработки на Go", API: "Основы разработки на Go (лекции)"
+        // 2. Поиск частичного совпадения как запасной вариант
+        matchedTask = tasksData.find(task => {
+            const apiTaskName = task.exercise?.name?.toLowerCase().trim() || '';
+            const apiCourseName = task.course?.name?.toLowerCase().trim() || '';
 
-        // Частичное совпадение: HTML-название задания содержится в API-названии задания, И HTML-название курса содержится в API-названии курса
-        // Или наоборот, если API-название содержится в HTML-названии.
-        // Это более гибкий подход, но "точно" означает, скорее всего, точное совпадение.
-        // Если "точно" - это 100% совпадение строк, то оставляем только `matchedTask` выше.
-        // Но для реальных данных часто бывают небольшие расхождения, поэтому я предложу более гибкий вариант как запасной.
+            const taskNameMatches = (apiTaskName.includes(normalizedHtmlTaskName) && normalizedHtmlTaskName.length > 3) ||
+                                    (normalizedHtmlTaskName.includes(apiTaskName) && apiTaskName.length > 3);
 
-        const partialMatchedTask = tasksData.find(task => {
-            const apiTaskName = task.exercise?.name ? task.exercise.name.toLowerCase().trim() : '';
-            const apiCourseName = task.course?.name ? task.course.name.toLowerCase().trim() : '';
+            const courseNameMatches = (apiCourseName.includes(normalizedHtmlCourseName) && normalizedHtmlCourseName.length > 3) ||
+                                      (normalizedHtmlCourseName.includes(apiCourseName) && apiCourseName.length > 3);
 
-            const taskNameMatches = (apiTaskName === normalizedHtmlTaskName) || // Точное совпадение
-                                    (apiTaskName.includes(normalizedHtmlTaskName) && normalizedHtmlTaskName.length > 3) || // HTML-имя в API-имени
-                                    (normalizedHtmlTaskName.includes(apiTaskName) && apiTaskName.length > 3); // API-имя в HTML-имени
-
-            const courseNameMatches = (apiCourseName === normalizedHtmlCourseName) || // Точное совпадение
-                                      (apiCourseName.includes(normalizedHtmlCourseName) && normalizedHtmlCourseName.length > 3) || // HTML-имя в API-имени
-                                      (normalizedHtmlCourseName.includes(apiCourseName) && apiCourseName.length > 3); // API-имя в HTML-имени
-            
             return taskNameMatches && courseNameMatches;
         });
 
-        return partialMatchedTask; // Возвращаем либо точное, либо частичное совпадение
+        return matchedTask;
     }
 
+    /**
+     * Обновляет статусы задач на странице на основе данных из API.
+     * @param {Array<Object>} tasksData
+     */
     function updateTaskStatuses(tasksData) {
         const statusElements = document.querySelectorAll('.state-chip');
-        
-        window.cuLmsLog('Task Status Updater: Found', statusElements.length, 'status elements'); // Логирование остается
-        
+        console.log('Task Status Updater: Found', statusElements.length, 'status elements');
         let updatedCount = 0;
-        
+
         statusElements.forEach((element, index) => {
             const htmlNames = extractTaskAndCourseNamesFromElement(element);
-            
-            if (htmlNames && htmlNames.taskName && htmlNames.courseName) {
-                window.cuLmsLog(`Task ${index}: Extracted names - Task: "${htmlNames.taskName}", Course: "${htmlNames.courseName}"`); // Логирование остается
-                
-                const task = findMatchingTask(htmlNames, tasksData);
-                
-                if (task) {
-                    window.cuLmsLog(`Task ${index}: Found matching task - "${task.exercise?.name}" in "${task.course?.name}"`); // Логирование остается
-                    
-                    // Обновляем статус, если задача уже была отправлена (submitAt не null)
-                    if (task.submitAt !== null) {
-                        if (element.textContent.includes('В работе')) {
-                            element.textContent = 'Есть решение';
-                            element.style.backgroundColor = '#4CAF50'; // Зеленый
-                            element.style.color = 'white';
-                            element.setAttribute('data-appearance', 'support-positive');
-                            
-                            updatedCount++;
-                            window.cuLmsLog(`Task Status Updater: Updated task "${task.exercise?.name}" to "Есть решение"`); // Логирование остается
-                        }
+            if (!htmlNames || !htmlNames.taskName || !htmlNames.courseName) {
+                console.warn(`Task ${index}: Could not extract task and/or course name for element`, element);
+                return;
+            }
+
+            // console.log(`Task ${index}: Extracted names - Task: "${htmlNames.taskName}", Course: "${htmlNames.courseName}"`);
+            const task = findMatchingTask(htmlNames, tasksData);
+
+            if (task) {
+                // console.log(`Task ${index}: Found matching task - "${task.exercise?.name}" in "${task.course?.name}"`);
+                let isUpdated = false;
+                // Статус "Проверяется" имеет самый высокий приоритет
+                if (task.state === 'evaluated' || task.state === 'review') {
+                    // if (!element.textContent.includes('Проверяется')) {
+                    //     element.textContent = 'Проверяется';
+                    //     element.style.backgroundColor = '#FF9800'; // Оранжевый
+                    //     element.style.color = 'white';
+                    //     element.setAttribute('data-appearance', 'support-warning');
+                    //     isUpdated = true;
+                    // }
+                }
+                // Затем проверяем, есть ли решение, если статус еще не "Проверяется"
+                else if (task.submitAt !== null) {
+                    if (element.textContent.includes('В работе')) {
+                         element.textContent = 'Есть решение';
+                         element.style.backgroundColor = '#4CAF50'; // Зеленый
+                         element.style.color = 'white';
+                         element.setAttribute('data-appearance', 'support-positive');
+                         isUpdated = true;
                     }
-                    
-                    // Обновляем статус, если задача находится на оценке или ревью
-                    if (task.state === 'evaluated' || task.state === 'review') {
-                        if (element.textContent.includes('В работе') || element.textContent.includes('Есть решение')) {
-                            element.textContent = 'Проверяется';
-                            element.style.backgroundColor = '#FF9800'; // Оранжевый
-                            element.style.color = 'white';
-                            element.setAttribute('data-appearance', 'support-warning');
-                            updatedCount++;
-                            window.cuLmsLog(`Task Status Updater: Updated task "${task.exercise?.name}" to "Проверяется"`); // Логирование остается
-                        }
-                    }
-                } else {
-                    window.cuLmsLog(`Task ${index}: No matching task found for HTML names Task: "${htmlNames.taskName}", Course: "${htmlNames.courseName}"`); // Логирование остается
+                }
+                if (isUpdated) {
+                    updatedCount++;
+                    console.log(`Task Status Updater: Updated task "${task.exercise?.name}"`);
                 }
             } else {
-                window.cuLmsLog(`Task ${index}: Could not extract task and/or course name for element`, element); // Логирование остается
+                // console.warn(`Task ${index}: No matching task found for HTML names Task: "${htmlNames.taskName}", Course: "${htmlNames.courseName}"`);
             }
         });
-        
+
         if (updatedCount > 0) {
-            window.cuLmsLog(`Task Status Updater: Updated ${updatedCount} tasks`); // Логирование остается
+            console.log(`Task Status Updater: Updated ${updatedCount} tasks`);
         }
     }
 
+    /**
+     * Ожидает появления элемента в DOM.
+     * @param {string} selector CSS-селектор элемента.
+     * @param {number} timeout Время ожидания в миллисекундах.
+     * @returns {Promise<Element>}
+     */
     function waitForElement(selector, timeout = 10000) {
         return new Promise((resolve, reject) => {
             const element = document.querySelector(selector);
@@ -205,24 +158,57 @@
                 resolve(element);
                 return;
             }
-            
+
             const observer = new MutationObserver((mutations, obs) => {
-                const element = document.querySelector(selector);
-                if (element) {
+                const foundElement = document.querySelector(selector);
+                if (foundElement) {
                     obs.disconnect();
-                    resolve(element);
+                    resolve(foundElement);
                 }
             });
-            
+
             observer.observe(document.body, {
                 childList: true,
                 subtree: true
             });
-            
+
             setTimeout(() => {
                 observer.disconnect();
-                reject(new Error(`Element ${selector} not found`));
+                reject(new Error(`Element ${selector} not found within ${timeout}ms`));
             }, timeout);
         });
     }
+
+    // --- Запуск скрипта ---
+
+    // Запускаем логику при первой загрузке
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', runLogic);
+    } else {
+        // Небольшая задержка, чтобы дать SPA-фреймворку отрисовать страницу
+        setTimeout(runLogic, 1000);
+    }
+
+    // Создаем MutationObserver для отслеживания изменений в DOM (для SPA-навигации)
+    const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            if (mutation.addedNodes.length) {
+                for (const node of mutation.addedNodes) {
+                    // Проверяем, появился ли в добавленных узлах нужный нам элемент
+                    if (node.nodeType === 1 && (node.matches('.task-table') || node.querySelector('.task-table'))) {
+                        // Запускаем логику снова с задержкой
+                        setTimeout(runLogic, 500);
+                        return; // Выходим из обоих циклов после первого найденного совпадения
+                    }
+                }
+            }
+        }
+    });
+
+    // Начинаем наблюдение за изменениями в document.body
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
 })();

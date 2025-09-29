@@ -258,6 +258,7 @@ async function overrideDownloadButtons() {
     }
 }
 
+(() => {
 overrideDownloadButtons();
 
 const observer = new MutationObserver((mutationsList, observer) => {
@@ -286,3 +287,4 @@ const observer = new MutationObserver((mutationsList, observer) => {
 });
 
 observer.observe(document.body, { childList: true, subtree: true });
+})();
