@@ -36,352 +36,279 @@
 
 /* 1. Глобальное определение переменных (на всякий случай) */
 :root {
-    --sidebar-layout-content-background-color: rgb(32, 33, 36) !important;
-    --cu-island-cover-bg: rgb(32, 33, 36) !important;
-    --informer-tui-text-02: rgb(255,255,255) !important; /*BTDEV: Обращения error color*/
+    /* Основные цвета фона */
+    --culms-dark-bg-primary: rgb(32, 33, 36);
+    --culms-dark-bg-secondary: rgb(40, 41, 44);
+    --culms-dark-bg-hover: rgb(50, 51, 54);
+    --culms-dark-bg-hover-light: rgb(55, 56, 60);
+    --culms-dark-bg-transparent: transparent;
+
+    /* Цвета текста */
+    --culms-dark-text-primary: rgb(255, 255, 255);
+    --culms-dark-text-secondary: #E8EAED;
+    --culms-dark-text-tertiary: #BDC1C6;
+    --culms-dark-text-link-hover: #8ab4f8;
+
+    /* Цвета рамок и разделителей */
+    --culms-dark-border-primary: rgb(55, 56, 60);
+    --culms-dark-border-secondary: rgb(70, 71, 74);
+    --culms-dark-border-hover: rgb(85, 86, 90);
+    --culms-dark-border-hover-light: rgb(138, 142, 147);
+
+    /* Цвета статусов */
+    --culms-dark-status-positive: #1e8e3e; /* Зеленый */
+    --culms-dark-status-negative: #d93025; /* Красный */
+    --culms-dark-status-in-progress: #F9AB00; /* Оранжевый/Желтый */
+    --culms-dark-status-neutral: #4285F4; /* Синий */
+    --culms-dark-status-chip-bg: rgb(50, 51, 54);
+
+    /* Цвета скроллбара */
+    --culms-dark-scrollbar-thumb: rgb(80, 81, 84);
+    --culms-dark-scrollbar-track: rgb(50, 51, 54);
+    
+    /* Совместимость со старыми переменными */
+    --sidebar-layout-content-background-color: var(--culms-dark-bg-primary) !important;
+    --cu-island-cover-bg: var(--culms-dark-bg-primary) !important;
+    --informer-tui-text-02: var(--culms-dark-text-primary) !important; /*BTDEV: Обращения error color*/
 }
 
 /* 2. Прямое переопределение для .course-card */
-/* Мы используем комбинацию селекторов (body и .course-card), 
-   чтобы гарантировать максимальную специфичность и победить Angular-стили. */
 body .course-card, 
 body .course-card * {
-    /* Фоновые цвета */
-    background-color: rgb(32, 33, 36) !important;
-    
-    /* Дополнительно переопределяем переменные, которые могут использоваться внутри компонента */
-    --cu-island-color-bg: rgb(32, 33, 36) !important;
-    --cu-island-color-bg-hover: rgb(50, 50, 50) !important; /* Устанавливаем более темный цвет для ховера */
-    
-    /* Переопределение любых текстовых цветов (если нужно) */
-    color: #f0f0f0 !important; 
+    background-color: var(--culms-dark-bg-primary) !important;
+    --cu-island-color-bg: var(--culms-dark-bg-primary) !important;
+    --cu-island-color-bg-hover: var(--culms-dark-bg-hover) !important;
+    color: var(--culms-dark-text-primary) !important; 
 }
+
 /*BTDEV: a lot of fixes for course card*/
 .tui-island::before {
-    /* Важно! Убеждаемся, что элемент снова видим, если прятали его раньше */
     display: block !important; 
-    
-    /* Задаем новую рамку */
-    border: 1px solid rgb(138, 142, 147) !important;
+    border: 1px solid var(--culms-dark-border-hover-light) !important;
   }
-a:hover .tui-island::before {
-    border-color: rgb(85, 86, 90) !important;
-  }
-
 /*BTDEV: corners fix for course card..*/
-
 li > a:has(.course-card) {
-    /* Делаем ссылку блочным элементом, чтобы на неё действовали радиусы и обрезка */
     display: block !important;
-    
-    /* Используем фиксированное значение радиуса для надежности (20px) */
     border-radius: 20px !important;
-    
-    /* ОБРЕЗАЕМ всё, что выходит за пределы скругленных углов */
     overflow: hidden !important;
   }
 
-  /*
-   * ШАГ 2: Страховка. Принудительно убираем фон при наведении и у ссылки <a>,
-   * и у родительского элемента списка <li>.
-   */
-  li:hover, a:hover {
-    background: transparent !important;
+li:hover, a:hover {
+    background: var(--culms-dark-bg-transparent) !important;
   }
 
-  /*
-   * ШАГ 3: Оставляем наши правила для рамки. Теперь они будут работать без артефактов.
-   */
-  .tui-island::before {
+.tui-island::before {
     display: block !important; 
-    border: 1px solid rgb(55, 56, 60) !important;
+    border: 1px solid var(--culms-dark-border-primary) !important;
   }
 
-  a:hover .tui-island::before {
-    border-color: rgb(138, 142, 147) !important; /* Более светлая рамка при наведении */
+a:hover .tui-island::before {
+    border-color: var(--culms-dark-border-hover-light) !important;
   }
-
-
-
-
 
 /* 3. Переопределение ховера */
 body .course-card:hover {
-    background-color: rgb(50, 50, 50) !important;  /*BTDEV: course card color */
+    background-color: var(--culms-dark-bg-hover) !important;  /*BTDEV: course card color */
 }
+
 .nav {
-    background-color: rgb(32, 33, 36) !important; /*BTDEV: nav bar on longread pages*/
+    background-color: var(--culms-dark-bg-primary) !important; /*BTDEV: nav bar on longread pages*/
 }
 .message-content {
-    background-color: rgb(32, 33, 36) !important; /*BTDEV: reviewer comments*/
+    background-color: var(--culms-dark-bg-primary) !important; /*BTDEV: reviewer comments*/
 }
 
 .user-profile-menu__content {
-    background-color: rgb(32,33,36) !important; /* Пример: тёмно-серый фон */
+    background-color: var(--culms-dark-bg-primary) !important;
   }
 
-  /* 2. Меняем цвет текста имени и email */
-  .user-info__name,
-  .user-info__email {
-    color: rgb(255,255,255) !important; /* Пример: светло-серый текст */
+.user-info__name,
+.user-info__email,
+.user-actions__action-title {
+    color: var(--culms-dark-text-primary) !important;
   }
 
-  /* 3. Меняем цвет текста в кнопках */
-  .user-actions__action-title {
-    color: rgb(255,255,255) !important; /* Пример: светло-серый текст */
-  }
-
-  /* 4. Меняем цвет иконок в кнопках с помощью фильтра */
-  /* Этот селектор нацелен на все кнопки внутри блока .user-actions */
 .content-wrapper { /*BTDEV: just background(profile)*/
-    background-color: rgb(32,33,36) !important;
-    --sidebar-layout-content-background-color: rgb(32,33,36) !important;
+    background-color: var(--culms-dark-bg-primary) !important;
+    --sidebar-layout-content-background-color: var(--culms-dark-bg-primary) !important;
 }
+
 .info-cell__label {
-    color: rgb(255,255,255) !important; /*BTDEV: profile labels*/
+    color: var(--culms-dark-text-primary) !important; /*BTDEV: profile labels*/
 }
-.t-header:hover {
-    background: rgb(50, 51, 54) !important; /*BTDEV: color change when hover on theme card*/
-}
+
+.t-header:hover,
 .themes-accordion-item:hover button.t-header.t-header_hoverable {
-    /* Замените rgb(50, 51, 54) на нужный вам цвет */
-    background: rgb(50, 51, 54) !important;
+    background: var(--culms-dark-bg-hover) !important; /*BTDEV: color change when hover on theme card*/
 }
+
 .tiptap.ProseMirror * {
-    color: rgb(255,255,255) !important; /*BTDEV: longread label*/
-}
-.tiptap.ProseMirror * { /*BTDEV: homework text color*/
-    /* Делаем цвет текста светлым */
-    color: #E8EAED !important;
-    
-    /* ЭТО САМОЕ ВАЖНОЕ: убираем белый фон у самого текста,
-       делая его прозрачным, чтобы был виден фон контейнера. */
-    background-color: transparent !important;
+    color: var(--culms-dark-text-secondary) !important; /*BTDEV: longread & homework text color*/
+    background-color: var(--culms-dark-bg-transparent) !important;
   }
-.text-tertiary { /*BTDEV: homework points total color*/
-    /* Задаем "тёмно-белый" (светло-серый) цвет */
-    color: #BDC1C6 !important;
-  }
+
+.text-tertiary, /*BTDEV: homework points total color*/
 .task-history-card__date { /*BTDEV: comments datetime color */
-    /* Задаем "тёмно-белый" (светло-серый) цвет */
-    color: #BDC1C6 !important;
+    color: var(--culms-dark-text-tertiary) !important;
   }
+
 /*BTDEV: avatars invert*/
 tui-avatar[data-type='text'] {
-    background-color: rgb(50, 51, 54) !important; /* Тёмно-серый фон */
-    color: #E8EAED !important; /* Светлый цвет для инициалов */
-    border: 1px solid rgb(70, 71, 74) !important; /* Опционально: рамка */
+    background-color: var(--culms-dark-bg-hover) !important;
+    color: var(--culms-dark-text-secondary) !important;
+    border: 1px solid var(--culms-dark-border-secondary) !important;
   }
 
 /*BTDEV: Ведомость*/
-.cu-table, .cu-table tbody tr {
-    background-color: rgb(32, 33, 36) !important; /* Основной тёмный фон */
-    color: rgb(255,255,255) !important; /* Светлый цвет текста по умолчанию */
+.cu-table, .cu-table tbody tr, .cu-table tbody td {
+    background-color: var(--culms-dark-bg-primary) !important;
+    color: var(--culms-dark-text-primary) !important;
   }
 
-  /* 2. Стилизуем заголовок таблицы (Предмет, Итого) */
-  .cu-table thead th {
-    background-color: rgb(40, 41, 44) !important; /* Фон заголовка чуть светлее */
-    color: #BDC1C6 !important; /* Текст заголовка чуть приглушен */
-    border-bottom: 1px solid rgb(55, 56, 60) !important; /* Линия под заголовком */
+.cu-table thead th {
+    background-color: var(--culms-dark-bg-secondary) !important;
+    color: var(--culms-dark-text-tertiary) !important;
+    border-bottom: 1px solid var(--culms-dark-border-primary) !important;
   }
 
-  /* 3. Делаем иконку сортировки светлой */
-  .cu-table thead th .t-icon {
+.cu-table thead th .t-icon {
     filter: invert(1) brightness(0.8) !important;
   }
 
-  /* 4. Настраиваем цвет ссылок и текста в ячейках */
-  .cu-table tbody td, .cu-table tbody td a {
-    color: rgb(255,255,255) !important; /* Светлый текст для ячеек и ссылок */
-  }
-  .cu-table tbody td { 
-    background-color: rgb(32, 33, 36) !important; /* Основной тёмный фон */
+.cu-table tbody td, .cu-table tbody td a {
+    color: var(--culms-dark-text-primary) !important;
   }
 
-  .cu-table tbody td a:hover {
-    color: #8ab4f8 !important; /* Подсветка ссылки при наведении */
+.cu-table tbody td a:hover {
+    color: var(--culms-dark-text-link-hover) !important;
   }
 
-  /* 5. Создаём эффект наведения на строки таблицы */
-  .cu-table tbody tr:hover td {
-    background-color: rgb(50, 51, 54) !important; /* Подсветка всей строки */
+.cu-table tbody tr:hover td {
+    background-color: var(--culms-dark-bg-hover) !important;
   }
 
-  /* 6. Меняем цвет вертикальных и горизонтальных разделителей */
-  .cu-table td._border-right,
-  .cu-table td {
-      border-color: rgb(55, 56, 60) !important;
+.cu-table td._border-right,
+.cu-table td {
+      border-color: var(--culms-dark-border-primary) !important;
   }
 
 /*BTDEV: Ведомость dropdown list*/
 tui-dropdown:not([data-appearance='dropdown-list']) {
-    background-color: rgb(40, 41, 44) !important;
-    border: 1px solid rgb(55, 56, 60) !important;
+    background-color: var(--culms-dark-bg-secondary) !important;
+    border: 1px solid var(--culms-dark-border-primary) !important;
   }
 
-  /* 2. Делаем текст внутри пунктов светлым */
-  tui-dropdown tui-data-list-wrapper span.t-content {
-    color: #E8EAED !important;
+tui-dropdown tui-data-list-wrapper span.t-content {
+    color: var(--culms-dark-text-secondary) !important;
   }
   
-  /* 3. Добавляем эффект подсветки при наведении на пункт списка */
-  tui-dropdown tui-data-list-wrapper button[tuioption]:hover {
-    background-color: rgb(55, 56, 60) !important;
+tui-dropdown tui-data-list-wrapper button[tuioption]:hover {
+    background-color: var(--culms-dark-bg-hover-light) !important;
   }
 
-  /* 4. Делаем иконку галочки (checkmark) светлой */
-  tui-dropdown .t-checkmark {
+tui-dropdown .t-checkmark {
       filter: invert(1) !important;
   }
 
-  /* 5. Стилизуем скроллбар */
-  tui-dropdown .t-bars {
-    background-color: transparent !important; /* Фон полосы прокрутки */
+tui-dropdown .t-bars {
+    background-color: var(--culms-dark-bg-transparent) !important;
   }
-  tui-dropdown .t-thumb {
-    background-color: rgb(80, 81, 84) !important; /* Цвет самого ползунка */
+tui-dropdown .t-thumb {
+    background-color: var(--culms-dark-scrollbar-thumb) !important;
   }
-
-
-
 
 tui-chip[data-appearance='neutral'] { /*BTDEV: statuses like Онлайн*/
-    /* Задаем новый тёмный фон */
-    background: rgb(50, 51, 54) !important;
-    
-    /* Делаем текст внутри светлым для контраста */
-    color: #BDC1C6 !important;
-    
-    /* Убираем рамку, если она есть */
+    background: var(--culms-dark-status-chip-bg) !important;
+    color: var(--culms-dark-text-tertiary) !important;
     border: 1px solid transparent !important;
 }
+
 .task-table__course-name { /*BTDEV: course_name color*/
-    /* Задаем светлый цвет текста */
-    color: #BDC1C6 !important;
+    color: var(--culms-dark-text-tertiary) !important;
 }
 
 .cu-table tfoot tr td {
-    background-color: rgb(40, 41, 44) !important; /* Фон как у заголовка */
+    background-color: var(--culms-dark-bg-secondary) !important;
+    border-color: var(--culms-dark-border-primary) !important;
   }
 
-  /*
-   * 2. Делаем весь текст внутри подвала светлым.
-   */
-  .cu-table tfoot tr td,
-  .cu-table tfoot tr td span {
-    color: #E8EAED !important;
+.cu-table tfoot tr td,
+.cu-table tfoot tr td span {
+    color: var(--culms-dark-text-secondary) !important;
   }
   
-  /*
-   * 3. Делаем иконку подсказки (help) светлой с помощью фильтра.
-   */
-  .cu-table tfoot tui-icon {
+.cu-table tfoot tui-icon {
     filter: invert(1) !important;
-  }
-
-  /*
-   * 4. Убеждаемся, что рамки тоже имеют правильный тёмный цвет.
-   */
-  .cu-table tfoot tr td {
-    border-color: rgb(55, 56, 60) !important;
   }
 
 a:hover .cu-navtab__main-element-text,  /*BTDEV: left panel navigation colors*/
-  button:hover .cu-navtab__main-element-text {
-    /* Замените #8ab4f8 на любой нужный вам цвет */
-    color: #8ab4f8 !important; 
+button:hover .cu-navtab__main-element-text {
+    color: var(--culms-dark-text-link-hover) !important; 
   }
 
-.task-table__task:hover td { /*BTDEV: tasks ui hover fix color*/
-    background-color: rgb(50, 51, 54) !important; /* Цвет подсветки */
+/*BTDEV: tasks ui hover fix color*/
+.task-table__task:hover td {
+    background-color: var(--culms-dark-bg-hover) !important;
   }
 
-  /*
-   * 2. Делаем ВЕСЬ текст внутри наведенной строки светлым для контраста.
-   *    Мы нацеливаемся и на сами ячейки, и на div'ы внутри них.
-   */
-  .task-table__task:hover td,
-  .task-table__task:hover div {
-    color: #E8EAED !important; /* Светлый цвет текста */
+.task-table__task:hover td,
+.task-table__task:hover div {
+    color: var(--culms-dark-text-secondary) !important;
   }
   
-  /*
-   * 3. Делаем иконки (часы и календарь) светлыми с помощью фильтра.
-   */
-  .task-table__task:hover tui-icon,
-  .task-table__task:hover button {
+.task-table__task:hover tui-icon,
+.task-table__task:hover button {
     filter: invert(1) !important;
 }
 
+/* Dropdown List */
 tui-dropdown[data-appearance='dropdown-list'] {
-    background-color: rgb(40, 41, 44) !important;
-    border: 1px solid rgb(55, 56, 60) !important;
+    background-color: var(--culms-dark-bg-secondary) !important;
+    border: 1px solid var(--culms-dark-border-primary) !important;
   }
 
-  /* 2. Делаем текст внутри пунктов светлым */
-  tui-dropdown span.t-content {
-    color: #E8EAED !important;
+tui-dropdown span.t-content {
+    color: var(--culms-dark-text-secondary) !important;
   }
   
-  /* 3. Добавляем эффект подсветки при наведении на пункт списка */
-  tui-dropdown button[tuioption]:hover {
-    background-color: rgb(55, 56, 60) !important;
+tui-dropdown button[tuioption]:hover {
+    background-color: var(--culms-dark-bg-hover-light) !important;
   }
 
-  /* 4. Делаем чекбоксы видимыми на тёмном фоне */
-  tui-dropdown input[tuicheckbox] {
-    /* Инвертируем цвет рамки чекбокса, делая её светлой */
+tui-dropdown input[tuicheckbox] {
     filter: invert(1) !important;
   }
   
-  /* 5. Стилизуем скроллбар */
-  tui-dropdown .t-bar {
-    background-color: rgb(50, 51, 54) !important; /* Фон полосы прокрутки */
+tui-dropdown .t-bar {
+    background-color: var(--culms-dark-scrollbar-track) !important;
   }
-  tui-dropdown .t-thumb {
-    background-color: rgb(80, 81, 84) !important; /* Цвет самого ползунка */
+tui-dropdown .t-thumb {
+    background-color: var(--culms-dark-scrollbar-thumb) !important;
   }
 
 
 /*BTDEV: tasks statuses color fix*/
 tui-chip[data-appearance='positive-pale'] {
-    /* Задаем более яркий и насыщенный зеленый фон */
-    background-color: #1e8e3e !important; 
-    
-    /* Делаем текст внутри белым для лучшего контраста */
-    color: #ffffff !important;
-    
-    /* Убираем бледную рамку, если она была */
+    background-color: var(--culms-dark-status-positive) !important; 
+    color: var(--culms-dark-text-primary) !important;
     border: none !important;
   }
 
 tui-chip[data-appearance='negative-pale'] {
-    background-color: #d93025 !important;
-    color: #ffffff !important;
+    background-color: var(--culms-dark-status-negative) !important;
+    color: var(--culms-dark-text-primary) !important;
     border: none !important;
   }
 
 tui-chip[data-appearance='support-categorical-13-pale'] {
-    /* Задаем яркий синий фон */
-    background-color: #4285F4 !important;
-    
-    /* Делаем текст внутри белым для контраста */
-    color: #ffffff !important;
-    
-    /* Убираем бледную рамку */
+    background-color: var(--culms-dark-status-neutral) !important;
+    color: var(--culms-dark-text-primary) !important;
     border: none !important;
   }
 
-  /* 2. Делаем статус "В работе" более заметным (оранжевый/жёлтый) */
-  tui-chip[data-appearance='support-categorical-12-pale'] {
-    /* Задаем насыщенный оранжевый фон */
-    background-color: #F9AB00 !important;
-    
-    /* Делаем текст внутри белым для контраста */
-    color: #ffffff !important;
-    
-    /* Убираем бледную рамку */
+tui-chip[data-appearance='support-categorical-12-pale'] {
+    background-color: var(--culms-dark-status-in-progress) !important;
+    color: var(--culms-dark-text-primary) !important;
     border: none !important;
   }
 
@@ -5443,7 +5370,7 @@ tui-root {
     --cu-button-background-primary: var(--accent);
     --cu-button-background-primary-hover: var(--accent-hover);
     --cu-button-background-primary-active: var(--accent-pressed);
-    --cu-button-text-primary: #d30d0df5;
+    --cu-button-text-primary: var(--culms-dark-text-primary);
     --cu-button-border-primary-focus: 2px solid var(--text-primary);
     --cu-button-background-primary-on-dark: #ed3131;
     --cu-button-background-primary-on-dark-hover: #1010ff;
