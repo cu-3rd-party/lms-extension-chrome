@@ -44,6 +44,11 @@
             "run_at": "document_idle"
         },
         {
+            "matches": ["https://my.centraluniversity.ru/learn/courses/view/actual"],
+            "js": ["course_exporter.js"],
+            "run_at": "document_idle"
+        },
+        {
             "matches": [
                 "https://my.centraluniversity.ru/*"
             ],
