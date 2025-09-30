@@ -1,214 +1,192 @@
-// Простой и эффективный content script
+// Финальная версия content script с клонированием элементов и исправлением стилей
 (function() {
     'use strict';
 
-    // Основная функция, которая запускает весь процесс
-    async function runLogic() {
-        try {
-            // Ждем появления таблиц с задачами
-            await waitForElement('.task-table');
-            // Получаем актуальные данные задач
-            const tasksData = await fetchTasksData();
-            // Обновляем статусы на странице
-            updateTaskStatuses(tasksData);
-        } catch (error) {
-            console.error('Task Status Updater: Error:', error); // Используем console.error для лучшего отслеживания
-        }
+    let isRunning = false;
+
+    /**
+     * Внедряет на страницу кастомные CSS-стили.
+     */
+    function injectCustomStyles() {
+        const styleId = 'culms-custom-styles';
+        if (document.getElementById(styleId)) return;
+
+        const styleElement = document.createElement('style');
+        styleElement.id = styleId;
+        styleElement.textContent = `
+            :root {
+                --culms-dark-bg-seminar: #a8a8a8;
+                --culms-status-seminar: #706f6f;
+                --culms-status-solved: #4CAF50; /* <<< ИЗМЕНЕНИЕ: Добавили свою CSS-переменную для удобства */
+            }
+            /* Стиль для аудиторной работы */
+            tui-chip.state-chip[data-culms-status="seminar"] {
+                background-color: var(--culms-status-seminar) !important;
+                color: white !important;
+            }
+            /* <<< ИЗМЕНЕНИЕ: Наше новое правило, которое будет перебивать стили темной темы */
+            tui-chip.state-chip[data-culms-status="solved"] {
+                background-color: var(--culms-status-solved) !important;
+                color: white !important;
+            }
+        `;
+        document.head.appendChild(styleElement);
+        console.log('Task Status Updater: Custom styles injected.');
     }
 
-    // Функция получения данных задач
-    async function fetchTasksData() {
-        try {
-            const response = await fetch('https://my.centraluniversity.ru/api/micro-lms/tasks/student');
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            console.log('Task Status Updater: Fetched', data.length, 'tasks');
-            return data;
-        } catch (error) {
-            console.error('Task Status Updater: Failed to fetch tasks:', error);
-            return []; // Возвращаем пустой массив в случае ошибки
+    /**
+     * Добавляет заголовок "Вес" путем клонирования существующего заголовка "Оценка".
+     */
+    function addWeightColumnHeader() {
+        const headerRow = document.querySelector('.task-table__header');
+        if (!headerRow || headerRow.querySelector('[data-culms-weight-header]')) {
+            return; // Заголовок уже есть или нет шапки таблицы
+        }
+
+        const scoreHeader = headerRow.querySelector('.task-table__score');
+        const stateHeader = headerRow.querySelector('.task-table__state');
+
+        if (scoreHeader && stateHeader) {
+            const weightHeader = scoreHeader.cloneNode(true); // Клонируем со всеми атрибутами
+            weightHeader.setAttribute('data-culms-weight-header', 'true'); // Наш маркер
+            weightHeader.textContent = 'Вес'; // Меняем только текст
+            stateHeader.parentNode.insertBefore(weightHeader, stateHeader.nextSibling);
         }
     }
 
     /**
-     * Извлекает название задания и название курса из элемента HTML.
-     * @param {HTMLElement} element Элемент, представляющий статус задачи или родительский элемент.
-     * @returns {{taskName: string|null, courseName: string|null}|null} Объект с именами, или null, если не найдено.
+     * Основная функция, которая запускает весь процесс.
+     */
+    async function runLogic() {
+        if (isRunning) return;
+        isRunning = true;
+        try {
+            await waitForElement('.task-table');
+            addWeightColumnHeader();
+            const tasksData = await fetchTasksData();
+            if (tasksData.length > 0) {
+               updateTaskStatuses(tasksData);
+            }
+        } catch (error) {
+            console.error('Task Status Updater: Error:', error);
+        } finally {
+            isRunning = false;
+        }
+    }
+
+    /**
+     * Получает данные задач из API.
+     */
+    async function fetchTasksData() {
+        try {
+            const response = await fetch('https://my.centraluniversity.ru/api/micro-lms/tasks/student');
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error('Task Status Updater: Failed to fetch tasks:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Извлекает название задания и курса из HTML-элемента.
      */
     function extractTaskAndCourseNamesFromElement(element) {
-        const taskRow = element.closest('tr[class*="task-table__task"], .task-item, .task-row');
+        const taskRow = element.closest('tr[class*="task-table__task"]');
         if (!taskRow) return null;
-
-        const taskNameElement = taskRow.querySelector('.task-table__task-name, .task-name, .exercise-name, [class*="task-name"]');
-        const courseNameElement = taskRow.querySelector('.task-table__course-name, .course-name, [class*="course-name"]');
-
-        const taskName = taskNameElement ? taskNameElement.textContent.trim() : null;
-        const courseName = courseNameElement ? courseNameElement.textContent.trim() : null;
-
+        const taskName = taskRow.querySelector('.task-table__task-name')?.textContent.trim();
+        const courseName = taskRow.querySelector('.task-table__course-name')?.textContent.trim();
         return { taskName, courseName };
     }
 
     /**
-     * Находит соответствующую задачу в массиве данных из API.
-     * @param {{taskName: string|null, courseName: string|null}} htmlNames Объект с названиями из HTML.
-     * @param {Array<Object>} tasksData Массив объектов задач из API.
-     * @returns {Object|null} Найденный объект задачи, или null.
+     * Находит соответствующую задачу в данных из API.
      */
     function findMatchingTask(htmlNames, tasksData) {
-        const { taskName: htmlTaskName, courseName: htmlCourseName } = htmlNames;
-        if (!htmlTaskName || !htmlCourseName) return null;
-
-        const normalizedHtmlTaskName = htmlTaskName.toLowerCase().trim();
-        const normalizedHtmlCourseName = htmlCourseName.toLowerCase().trim();
-
-        // 1. Поиск точного совпадения
-        let matchedTask = tasksData.find(task => {
-            const apiTaskName = task.exercise?.name?.toLowerCase().trim() || '';
-            const apiCourseName = task.course?.name?.toLowerCase().trim() || '';
-            return apiTaskName === normalizedHtmlTaskName && apiCourseName === normalizedHtmlCourseName;
-        });
-
-        if (matchedTask) return matchedTask;
-
-        // 2. Поиск частичного совпадения как запасной вариант
-        matchedTask = tasksData.find(task => {
-            const apiTaskName = task.exercise?.name?.toLowerCase().trim() || '';
-            const apiCourseName = task.course?.name?.toLowerCase().trim() || '';
-
-            const taskNameMatches = (apiTaskName.includes(normalizedHtmlTaskName) && normalizedHtmlTaskName.length > 3) ||
-                                    (normalizedHtmlTaskName.includes(apiTaskName) && apiTaskName.length > 3);
-
-            const courseNameMatches = (apiCourseName.includes(normalizedHtmlCourseName) && normalizedHtmlCourseName.length > 3) ||
-                                      (normalizedHtmlCourseName.includes(apiCourseName) && apiCourseName.length > 3);
-
-            return taskNameMatches && courseNameMatches;
-        });
-
-        return matchedTask;
+        if (!htmlNames.taskName || !htmlNames.courseName) return null;
+        const normalizedHtmlTaskName = htmlNames.taskName.toLowerCase();
+        const normalizedHtmlCourseName = htmlNames.courseName.toLowerCase();
+        return tasksData.find(task =>
+            task.exercise?.name?.toLowerCase().trim() === normalizedHtmlTaskName &&
+            task.course?.name?.toLowerCase().trim() === normalizedHtmlCourseName
+        );
     }
 
     /**
-     * Обновляет статусы задач на странице на основе данных из API.
-     * @param {Array<Object>} tasksData
+     * Обновляет статусы задач и добавляет/обновляет колонку с весом.
      */
     function updateTaskStatuses(tasksData) {
-        const statusElements = document.querySelectorAll('.state-chip');
-        console.log('Task Status Updater: Found', statusElements.length, 'status elements');
-        let updatedCount = 0;
+        document.querySelectorAll('tr[class*="task-table__task"]').forEach(row => {
+            const statusElement = row.querySelector('.state-chip');
+            if (!statusElement) return;
 
-        statusElements.forEach((element, index) => {
-            const htmlNames = extractTaskAndCourseNamesFromElement(element);
-            if (!htmlNames || !htmlNames.taskName || !htmlNames.courseName) {
-                console.warn(`Task ${index}: Could not extract task and/or course name for element`, element);
-                return;
-            }
-
-            // console.log(`Task ${index}: Extracted names - Task: "${htmlNames.taskName}", Course: "${htmlNames.courseName}"`);
+            const htmlNames = extractTaskAndCourseNamesFromElement(statusElement);
             const task = findMatchingTask(htmlNames, tasksData);
 
             if (task) {
-                // console.log(`Task ${index}: Found matching task - "${task.exercise?.name}" in "${task.course?.name}"`);
-                let isUpdated = false;
-                // Статус "Проверяется" имеет самый высокий приоритет
-                if (task.state === 'evaluated' || task.state === 'review') {
-                    // if (!element.textContent.includes('Проверяется')) {
-                    //     element.textContent = 'Проверяется';
-                    //     element.style.backgroundColor = '#FF9800'; // Оранжевый
-                    //     element.style.color = 'white';
-                    //     element.setAttribute('data-appearance', 'support-warning');
-                    //     isUpdated = true;
-                    // }
+                // Обновление статусов
+                if (task.exercise?.activity?.name === 'Аудиторная работа') {
+                    statusElement.textContent = 'Аудиторная';
+                    statusElement.setAttribute('data-culms-status', 'seminar');
+                    row.style.backgroundColor = 'var(--culms-dark-bg-seminar)';
+                } else if (task.submitAt !== null && statusElement.textContent.includes('В работе')) {
+                    statusElement.textContent = 'Есть решение';
+                    // <<< ИЗМЕНЕНИЕ: Убираем инлайновые стили и ставим свой атрибут.
+                    // Стилизация теперь будет происходить через CSS, который мы внедрили выше.
+                    statusElement.setAttribute('data-culms-status', 'solved');
+                    // statusElement.style.backgroundColor = '#4CAF50'; // Больше не нужно
+                    // statusElement.style.color = 'white'; // Больше не нужно
                 }
-                // Затем проверяем, есть ли решение, если статус еще не "Проверяется"
-                else if (task.submitAt !== null) {
-                    if (element.textContent.includes('В работе')) {
-                         element.textContent = 'Есть решение';
-                         element.style.backgroundColor = '#4CAF50'; // Зеленый
-                         element.style.color = 'white';
-                         element.setAttribute('data-appearance', 'support-positive');
-                         isUpdated = true;
+
+                // --- ЛОГИКА КОЛОНКИ "ВЕС" ---
+                const weight = task.exercise?.activity?.weight;
+                let weightCell = row.querySelector('[data-culms-weight-cell]');
+
+                // Если ячейки еще нет - создаем ее путем клонирования
+                if (!weightCell) {
+                    const originalScoreCell = row.querySelector('.task-table__score');
+                    const stateCell = row.querySelector('.task-table__state');
+
+                    if (originalScoreCell && stateCell) {
+                        weightCell = originalScoreCell.cloneNode(true); // <--- Ключевой момент: клонируем ячейку
+                        weightCell.setAttribute('data-culms-weight-cell', 'true'); // Ставим маркер, чтобы найти ее в следующий раз
+                        stateCell.parentNode.insertBefore(weightCell, stateCell.nextSibling);
                     }
                 }
-                if (isUpdated) {
-                    updatedCount++;
-                    console.log(`Task Status Updater: Updated task "${task.exercise?.name}"`);
+
+                // Обновляем текст в ячейке (в уже существующей или только что созданной)
+                if (weightCell) {
+                    weightCell.textContent = (weight !== undefined && weight !== null) ? `${Math.round(weight * 100)}%` : '—';
                 }
-            } else {
-                // console.warn(`Task ${index}: No matching task found for HTML names Task: "${htmlNames.taskName}", Course: "${htmlNames.courseName}"`);
             }
         });
-
-        if (updatedCount > 0) {
-            console.log(`Task Status Updater: Updated ${updatedCount} tasks`);
-        }
     }
 
     /**
      * Ожидает появления элемента в DOM.
-     * @param {string} selector CSS-селектор элемента.
-     * @param {number} timeout Время ожидания в миллисекундах.
-     * @returns {Promise<Element>}
      */
     function waitForElement(selector, timeout = 10000) {
         return new Promise((resolve, reject) => {
-            const element = document.querySelector(selector);
-            if (element) {
-                resolve(element);
-                return;
-            }
-
-            const observer = new MutationObserver((mutations, obs) => {
-                const foundElement = document.querySelector(selector);
-                if (foundElement) {
-                    obs.disconnect();
-                    resolve(foundElement);
+            if (document.querySelector(selector)) return resolve(document.querySelector(selector));
+            const observer = new MutationObserver(() => {
+                if (document.querySelector(selector)) {
+                    observer.disconnect();
+                    resolve(document.querySelector(selector));
                 }
             });
-
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
-
-            setTimeout(() => {
-                observer.disconnect();
-                reject(new Error(`Element ${selector} not found within ${timeout}ms`));
-            }, timeout);
+            observer.observe(document.body, { childList: true, subtree: true });
+            setTimeout(() => { observer.disconnect(); reject(new Error(`Timeout waiting for ${selector}`)); }, timeout);
         });
     }
 
     // --- Запуск скрипта ---
+    injectCustomStyles();
 
-    // Запускаем логику при первой загрузке
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', runLogic);
     } else {
-        // Небольшая задержка, чтобы дать SPA-фреймворку отрисовать страницу
-        setTimeout(runLogic, 1000);
+        runLogic();
     }
 
-    // Создаем MutationObserver для отслеживания изменений в DOM (для SPA-навигации)
-    const observer = new MutationObserver((mutations) => {
-        for (const mutation of mutations) {
-            if (mutation.addedNodes.length) {
-                for (const node of mutation.addedNodes) {
-                    // Проверяем, появился ли в добавленных узлах нужный нам элемент
-                    if (node.nodeType === 1 && (node.matches('.task-table') || node.querySelector('.task-table'))) {
-                        // Запускаем логику снова с задержкой
-                        setTimeout(runLogic, 500);
-                        return; // Выходим из обоих циклов после первого найденного совпадения
-                    }
-                }
-            }
-        }
-    });
-
-    // Начинаем наблюдение за изменениями в document.body
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
-
+    setInterval(runLogic, 10000); // Периодическое обновление
 })();
