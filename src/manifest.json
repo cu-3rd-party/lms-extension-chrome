@@ -31,6 +31,12 @@
         },
         {
             "matches": [
+                "https://my.centraluniversity.ru/learn/courses/view/actual/*/themes/*/longreads/*"
+            ],
+            "js": ["homework_weight_fix.js"]
+        },
+        {
+            "matches": [
                 "https://my.centraluniversity.ru/learn/tasks/*"
             ],
             "js": ["tasks_fix.js"],
