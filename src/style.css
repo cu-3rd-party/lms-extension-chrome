@@ -62,6 +62,8 @@
     --culms-dark-status-neutral: #4285F4; /* Синий */
     --culms-dark-status-backlog: #3C4043; /* Серый */
     --culms-dark-status-chip-bg: rgb(50, 51, 54);
+    --culms-dark-bg-seminar: rgb(20, 20, 20);
+    --culms-status-seminar: rgb(40,40,40) !important;
 
     /* Цвета скроллбара */
     --culms-dark-scrollbar-thumb: rgb(80, 81, 84);
