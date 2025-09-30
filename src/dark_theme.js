@@ -118,6 +118,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     }
 });
 
+(() => {
 // 2. Применяем тему при первой загрузке страницы, если она была включена
 chrome.storage.sync.get('themeEnabled', (data) => {
     if (data.themeEnabled) {
@@ -134,3 +135,4 @@ observer.observe(document.body, { childList: true, subtree: true });
 
 // 4. Первоначальная попытка добавить кнопку
 addButtonToHeader();
+})();

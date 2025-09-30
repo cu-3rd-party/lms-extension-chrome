@@ -60,6 +60,7 @@
     --culms-dark-status-negative: #d93025; /* Красный */
     --culms-dark-status-in-progress: #F9AB00; /* Оранжевый/Желтый */
     --culms-dark-status-neutral: #4285F4; /* Синий */
+    --culms-dark-status-backlog: #3C4043; /* Серый */
     --culms-dark-status-chip-bg: rgb(50, 51, 54);
 
     /* Цвета скроллбара */
@@ -70,6 +71,15 @@
     --sidebar-layout-content-background-color: var(--culms-dark-bg-primary) !important;
     --cu-island-cover-bg: var(--culms-dark-bg-primary) !important;
     --informer-tui-text-02: var(--culms-dark-text-primary) !important; /*BTDEV: Обращения error color*/
+}
+/*BTDEV: tabs text color when you make mouse over it*/
+.header__tab-link:hover {
+  color: var(--culms-dark-text-tertiary) !important;
+}
+
+ /*BTDEV: text input background fix*/
+tui-input .t-textfield {
+  background-color: var(--culms-dark-bg-hover-light) !important;
 }
 
 /* 2. Прямое переопределение для .course-card */
@@ -311,6 +321,11 @@ tui-chip[data-appearance='support-categorical-12-pale'] {
     color: var(--culms-dark-text-primary) !important;
     border: none !important;
   }
+.state-chip[data-appearance="support-neutral"] {
+  background-color: var(--culms-dark-status-backlog) !important;
+  color: var(--culms-dark-text-primary) !important;
+  border: none !important;
+}
 
 
 /* ... остальные ваши стили ... */
