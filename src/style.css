@@ -72,6 +72,15 @@
     --cu-island-cover-bg: var(--culms-dark-bg-primary) !important;
     --informer-tui-text-02: var(--culms-dark-text-primary) !important; /*BTDEV: Обращения error color*/
 }
+/*BTDEV: tabs text color when you make mouse over it*/
+.header__tab-link:hover {
+  color: var(--culms-dark-text-tertiary) !important;
+}
+
+ /*BTDEV: text input background fix*/
+tui-input .t-textfield {
+  background-color: var(--culms-dark-bg-hover-light) !important;
+}
 
 /* 2. Прямое переопределение для .course-card */
 body .course-card, 
