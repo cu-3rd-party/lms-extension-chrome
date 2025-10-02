@@ -161,21 +161,36 @@ function updateCourseCard(li, courseId, isLocallyArchived, isDarkTheme) {
     const paragraphSection = li.querySelector('section.tui-island__paragraph');
     if (!paragraphSection) return;
 
-    paragraphSection.style.cssText = `display: flex; flex-direction: column; justify-content: space-between; height: 100%;`;
+    // 1. Устанавливаем секции ПОЛНУЮ ВЫСОТУ и делаем ее точкой отсчета.
+    paragraphSection.style.cssText = 'position: relative; height: 100%;';
+
+    const titleElement = paragraphSection.querySelector('h2.course-card__title');
+    if (titleElement) {
+        // Убираем класс, обрезающий текст.
+        titleElement.classList.remove('three-lines-text');
+        // Добавим немного отступа снизу, чтобы текст не наезжал на кнопку.
+        titleElement.style.paddingBottom = '32px'; 
+    }
 
     let buttonContainer = li.querySelector('.archive-button-container');
     if (!buttonContainer) {
         buttonContainer = document.createElement('div');
         buttonContainer.className = 'archive-button-container';
-        buttonContainer.style.cssText = 'align-self: flex-end;';
         paragraphSection.appendChild(buttonContainer);
     }
+    
+    // 2. Позиционируем кнопку абсолютно относительно правого нижнего угла секции.
+    // Отступы в '1rem' (или 16px) должны совпадать с внутренними отступами карточки.
+    buttonContainer.style.cssText = ''; // Сброс
+    buttonContainer.style.position = 'absolute';
+    buttonContainer.style.right = '-0.3rem';
+    buttonContainer.style.bottom = '-0.5rem';
+    
     buttonContainer.innerHTML = '';
 
     const archiveButton = document.createElement('button');
     archiveButton.style.cssText = `background: none; border: none; padding: 0; cursor: pointer; line-height: 0;`;
     
-    // Создаем <span> для иконки
     const iconSpan = document.createElement('span');
 
     const iconUrl = isLocallyArchived
@@ -184,7 +199,6 @@ function updateCourseCard(li, courseId, isLocallyArchived, isDarkTheme) {
     
     const iconColor = isDarkTheme ? 'white' : '#4b5563';
 
-    // Устанавливаем все стили для маски
     iconSpan.style.display = 'inline-block';
     iconSpan.style.width = '24px';
     iconSpan.style.height = '24px';
@@ -193,8 +207,6 @@ function updateCourseCard(li, courseId, isLocallyArchived, isDarkTheme) {
     iconSpan.style.setProperty('mask-size', 'contain');
     iconSpan.style.setProperty('-webkit-mask-size', 'contain');
     iconSpan.style.setProperty('mask-repeat', 'no-repeat');
-    
-    // Применяем цвет с !important, чтобы его не переопределили другие стили
     iconSpan.style.setProperty('background-color', iconColor, 'important');
 
     archiveButton.appendChild(iconSpan);

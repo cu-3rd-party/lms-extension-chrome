@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
     "name": "CU LMS Enhancer",
-    "version": "0.2",
-    "description": "Добавляет функционал архивации курсов и обновления статусов задач.",
+    "version": "1.0",
+    "description": "Неофициальная доработка CU LMS, возвращает утерянные функции, добавляет темную тему, отображение весов заданий",
     "permissions": [
         "storage",
         "scripting",
@@ -35,5 +35,8 @@
                 "https://my.centraluniversity.ru/*"
             ]
         }
-    ]
+    ],
+    "icons": {
+        "128": "icon128.png"
+    }
 }
