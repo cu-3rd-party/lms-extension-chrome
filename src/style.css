@@ -9542,3 +9542,25 @@ pre[class*=language-] {
 .token.entity {
     cursor: help
 }
+
+/* --- Стили для статусов и строк из tasks_fix.js --- */
+/*BTDEV: don't give a fuck why gemini suggested to add in end of file*/
+:root {
+    --culms-dark-bg-seminar: rgb(20,20,20); /* Сделал чуть темнее для лучшего контраста в темной теме */
+    --culms-status-seminar: #706f6f;
+    --culms-status-solved: #4CAF50;
+}
+
+tr[data-culms-row-type="seminar"] {
+    background-color: var(--culms-dark-bg-seminar) !important;
+}
+
+tui-chip.state-chip[data-culms-status="seminar"] {
+    background-color: var(--culms-status-seminar) !important;
+    color: white !important;
+}
+
+tui-chip.state-chip[data-culms-status="solved"] {
+    background-color: var(--culms-status-solved) !important;
+    color: white !important;
+}
