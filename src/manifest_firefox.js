@@ -13,7 +13,7 @@
     ],
 
     "background": {
-        "service_worker": "background.js"
+        "scripts": ["browser-polyfill.js", "background.js"]
     },
 
     "action": {
@@ -41,5 +41,10 @@
     ],
     "icons": {
         "128": "icon128.png"
+    },
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "lms-enhancer@your-domain.com"
+        }
     }
 }

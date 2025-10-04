@@ -1,32 +1,26 @@
-// homework_weight_fix.js (адаптированная версия)
+// homework_weight_fix.js (ИСПРАВЛЕННАЯ версия для Firefox)
 'use strict';
 
 /**
  * Основная функция, запускающая всю логику.
  */
 async function runLogic() {
-    // Проверяем, что мы на нужной странице и что вес еще не был добавлен
     const match = window.location.pathname.match(/longreads\/(\d+)/);
     if (!match || document.querySelector('[data-culms-longread-weight]')) {
         return;
     }
-
     const longreadId = match[1];
-
     try {
         const apiResponse = await fetchLongreadData(longreadId);
         const weight = findWeightInApiResponse(apiResponse);
-
         if (weight === null) {
-            console.log('Longread Weight: Weight not found in API response.');
+            window.cuLmsLog('Longread Weight: Weight not found in API response.');
             return;
         }
-
         const infoList = await waitForElement('ul.task-info');
         if (infoList) {
             insertWeightElement(infoList, weight);
         }
-
     } catch (error) {
         console.error('Longread Weight: Error:', error);
     }
@@ -37,7 +31,8 @@ async function runLogic() {
  */
 async function fetchLongreadData(longreadId) {
     const apiUrl = `https://my.centraluniversity.ru/api/micro-lms/longreads/${longreadId}/materials?limit=10000`;
-    const response = await fetch(apiUrl);
+    // ИЗМЕНЕНИЕ: Добавлен параметр credentials, чтобы Firefox отправлял cookie для аутентификации.
+    const response = await fetch(apiUrl, { credentials: 'include' });
     if (!response.ok) {
         throw new Error(`API request failed! Status: ${response.status}`);
     }
@@ -72,31 +67,25 @@ function findItemByTitle(listElement, title) {
  * Клонирует подходящий элемент, заполняет его данными о весе и вставляет на страницу.
  */
 function insertWeightElement(infoList, weight) {
-    if (infoList.querySelector('[data-culms-longread-weight]')) return; // Двойная проверка
-
+    if (infoList.querySelector('[data-culms-longread-weight]')) return;
     const anchorItem = findItemByTitle(infoList, 'Статус');
     if (!anchorItem) {
-        console.log('Longread Weight: Could not find "Статус" item to insert after.');
+        window.cuLmsLog('Longread Weight: Could not find "Статус" item to insert after.');
         return;
     }
-
     const cloneSourceItem = findItemByTitle(infoList, 'Оценка') || findItemByTitle(infoList, 'Дедлайн');
     if (!cloneSourceItem) {
-        console.log('Longread Weight: Could not find a suitable item to clone.');
+        window.cuLmsLog('Longread Weight: Could not find a suitable item to clone.');
         return;
     }
-
     const weightListItem = cloneSourceItem.cloneNode(true);
     weightListItem.setAttribute('data-culms-longread-weight', 'true');
-
     const titleSpan = weightListItem.querySelector('.task-info__item-title');
     const valueSpan = weightListItem.querySelectorAll('span')[1];
-
     if (titleSpan) titleSpan.textContent = 'Вес';
     if (valueSpan) valueSpan.innerHTML = ` ${Math.round(weight * 100)}% `;
-
     anchorItem.parentNode.insertBefore(weightListItem, anchorItem.nextSibling);
-    console.log('Longread Weight: Weight info added successfully.');
+    window.cuLmsLog('Longread Weight: Weight info added successfully.');
 }
 
 /**
@@ -106,7 +95,6 @@ function waitForElement(selector, timeout = 10000) {
     return new Promise((resolve, reject) => {
         const element = document.querySelector(selector);
         if (element) return resolve(element);
-
         const observer = new MutationObserver((mutations, obs) => {
             const foundElement = document.querySelector(selector);
             if (foundElement) {
@@ -114,7 +102,6 @@ function waitForElement(selector, timeout = 10000) {
                 resolve(foundElement);
             }
         });
-
         observer.observe(document.body, { childList: true, subtree: true });
         setTimeout(() => {
             observer.disconnect();

@@ -1,7 +1,7 @@
-// dark_theme.js (без изменений)
+// dark_theme.js (кросс-браузерная версия)
 'use strict';
 
-// "Предохранитель" от повторного запуска. Если скрипт уже инициализирован, выходим.
+// "Предохранитель" от повторного запуска.
 if (typeof window.darkThemeInitialized === 'undefined') {
     window.darkThemeInitialized = true;
 
@@ -15,7 +15,8 @@ if (typeof window.darkThemeInitialized === 'undefined') {
         const existingStyle = document.getElementById(STYLE_ID);
         if (isEnabled) {
             if (existingStyle) return;
-            fetch(chrome.runtime.getURL('style.css'))
+            // ИЗМЕНЕНО: chrome.runtime -> browser.runtime
+            fetch(browser.runtime.getURL('style.css'))
                 .then(response => response.text())
                 .then(css => {
                     const style = document.createElement('style');
@@ -30,15 +31,17 @@ if (typeof window.darkThemeInitialized === 'undefined') {
 
     /**
      * Обновляет иконку и подсказку на кнопке.
+     * Переписано с использованием async/await.
      */
-    function updateButtonState() {
+    async function updateButtonState() {
         if (!themeToggleButton) return;
-        chrome.storage.sync.get('themeEnabled', (data) => {
-            const isEnabled = !!data.themeEnabled;
-            const iconUrl = isEnabled ? 'icons/sun.svg' : 'icons/moon.svg';
-            themeToggleButton.style.setProperty('--t-icon-start', `url(${chrome.runtime.getURL(iconUrl)})`);
-            themeToggleButton.title = isEnabled ? 'Переключить на светлую тему' : 'Переключить на темную тему';
-        });
+        // ИЗМЕНЕНО: chrome.storage -> browser.storage с await
+        const data = await browser.storage.sync.get('themeEnabled');
+        const isEnabled = !!data.themeEnabled;
+        const iconUrl = isEnabled ? 'icons/sun.svg' : 'icons/moon.svg';
+        // ИЗМЕНЕНО: chrome.runtime -> browser.runtime
+        themeToggleButton.style.setProperty('--t-icon-start', `url(${browser.runtime.getURL(iconUrl)})`);
+        themeToggleButton.title = isEnabled ? 'Переключить на светлую тему' : 'Переключить на темную тему';
     }
 
     /**
@@ -60,15 +63,15 @@ if (typeof window.darkThemeInitialized === 'undefined') {
         button.setAttribute('data-size', 'm');
         button.classList.add('button-action');
 
-        button.addEventListener('click', () => {
-            chrome.storage.sync.get('themeEnabled', (data) => {
-                chrome.storage.sync.set({ themeEnabled: !data.themeEnabled });
-            });
+        // ИЗМЕНЕНО: обработчик клика переписан с async/await
+        button.addEventListener('click', async () => {
+            const data = await browser.storage.sync.get('themeEnabled');
+            await browser.storage.sync.set({ themeEnabled: !data.themeEnabled });
         });
 
         listItem.appendChild(button);
         themeToggleButton = button;
-        updateButtonState();
+        updateButtonState(); // Вызываем асинхронную функцию
         return listItem;
     }
 
@@ -76,7 +79,7 @@ if (typeof window.darkThemeInitialized === 'undefined') {
      * Ищет место для вставки и добавляет туда кнопку.
      */
     function addButtonToHeader() {
-        if (document.querySelector('.theme-toggle-container')) return; // Кнопка уже есть
+        if (document.querySelector('.theme-toggle-container')) return;
 
         const headerActionsList = document.querySelector('ul.header__actions-list');
         const userProfileMenu = document.querySelector('cu-user-profile-menu');
@@ -94,7 +97,7 @@ if (typeof window.darkThemeInitialized === 'undefined') {
         const observer = new MutationObserver((mutations, obs) => {
             if (document.querySelector('ul.header__actions-list')) {
                 addButtonToHeader();
-                obs.disconnect(); // Нашли, добавили, отключились.
+                obs.disconnect();
             }
         });
         observer.observe(document.body, { childList: true, subtree: true });
@@ -102,16 +105,18 @@ if (typeof window.darkThemeInitialized === 'undefined') {
 
     // --- ОСНОВНАЯ ЛОГИКА ---
 
-    // 1. Слушаем изменения в хранилище (самая важная часть).
-    chrome.storage.onChanged.addListener((changes, namespace) => {
+    // 1. Слушаем изменения в хранилище.
+    // ИЗМЕНЕНО: chrome.storage -> browser.storage
+    browser.storage.onChanged.addListener((changes, namespace) => {
         if (changes.themeEnabled) {
             applyTheme(!!changes.themeEnabled.newValue);
-            updateButtonState();
+            updateButtonState(); // Вызываем асинхронную функцию
         }
     });
 
     // 2. Применяем тему при первой загрузке скрипта.
-    chrome.storage.sync.get('themeEnabled', (data) => {
+    // ИЗМЕНЕНО: chrome.storage -> browser.storage с .then()
+    browser.storage.sync.get('themeEnabled').then((data) => {
         if (data.themeEnabled) {
             applyTheme(true);
         }
