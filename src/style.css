@@ -4318,7 +4318,7 @@ svg use {
 }
 
 :root {
-    --border: transparent; /*BTDEV: BORDER COLOR*/
+    --border: rgb(85, 86, 90); /*BTDEV: BORDER COLOR*/
     --border-hover: #00102438;
     --border-focus: #00102470;
     --border-dark: #f9fafb24;
