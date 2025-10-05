@@ -74,6 +74,28 @@
     --cu-island-cover-bg: var(--culms-dark-bg-primary) !important;
     --informer-tui-text-02: var(--culms-dark-text-primary) !important; /*BTDEV: Обращения error color*/
 }
+
+/*BTDEV: Перенести дедлайн исправление*/
+tui-hint {
+    background-color: var(--culms-dark-bg-secondary) !important;
+    color: var(--culms-dark-text-secondary) !important;
+}
+
+tui-hint span {
+    color: white !important;
+}
+
+[role=tooltip] tui-hint {
+    background-color: var(--culms-dark-bg-secondary) !important;
+    color: white !important;
+}
+
+[role=tooltip] tui-hint span {
+    color: white !important;
+}
+
+
+
 /*BTDEV: tabs text color when you make mouse over it*/
 .header__tab-link:hover {
   color: var(--culms-dark-text-tertiary) !important;
