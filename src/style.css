@@ -107,42 +107,70 @@ tui-input .t-textfield {
 }
 
 /* 2. Прямое переопределение для .course-card */
-body .course-card, 
+/* Сбрасываем фон здесь, так как будем управлять им на .tui-island */
+body .course-card,
 body .course-card * {
-    background-color: var(--culms-dark-bg-primary) !important;
-    --cu-island-color-bg: var(--culms-dark-bg-primary) !important;
-    --cu-island-color-bg-hover: var(--culms-dark-bg-hover) !important;
-    color: var(--culms-dark-text-primary) !important; 
+    background: transparent !important;
+    color: var(--culms-dark-text-primary) !important;
 }
 
-/*BTDEV: a lot of fixes for course card*/
-.tui-island::before {
-    display: block !important; 
-    border: 1px solid var(--culms-dark-border-hover-light) !important;
-  }
-/*BTDEV: corners fix for course card..*/
+/* Убираем мешающие стили с родительских элементов */
 li > a:has(.course-card) {
     display: block !important;
-    border-radius: 20px !important;
-    overflow: hidden !important;
-  }
+    /* Убираем отсюда стили, которые теперь будут на .tui-island */
+    overflow: visible !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
 
 li:hover, a:hover {
-    background: var(--culms-dark-bg-transparent) !important;
-  }
+    background: transparent !important; /* Убедимся, что нет фона при наведении */
+}
 
+
+/* --- ОСНОВНОЙ ФИКС --- */
+
+/* 1. Стилизуем сам блок .tui-island */
+.tui-island {
+    position: relative !important; /* Для позиционирования псевдо-элемента ::before */
+    border-radius: 20px !important; /* Скругление углов */
+    background-color: var(--culms-dark-bg-primary) !important; /* Фон в состоянии покоя */
+    z-index: 0; /* Создаем новый контекст наложения */
+    /* Свойство, которое часто решает проблемы с рендерингом углов */
+    isolation: isolate !important;
+}
+
+/* 2. Рисуем рамку поверх фона с помощью псевдо-элемента */
 .tui-island::before {
-    display: block !important; 
-    border: 1px solid var(--culms-dark-border-primary) !important;
-  }
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    
+    /* Важно: наследуем радиус скругления, чтобы формы идеально совпали */
+    border-radius: inherit !important;
+    
+    /* ИЗМЕНЕНИЕ: толщина рамки с 1px на 0.5px */
+    box-shadow: 0 0 0 0.5px var(--culms-dark-border-primary) inset !important;
+    
+    pointer-events: none !important; /* Чтобы рамка не мешала кликам */
+    z-index: 1 !important; /* Рамка должна быть НАД фоном */
+}
 
+
+/* --- ПОВЕДЕНИЕ ПРИ НАВЕДЕНИИ (HOVER) --- */
+
+/* Меняем фон самого .tui-island */
+a:hover .tui-island {
+    background-color: var(--culms-dark-bg-hover) !important;
+}
+
+/* Меняем цвет рамки (box-shadow) у псевдо-элемента */
 a:hover .tui-island::before {
-    border-color: var(--culms-dark-border-hover-light) !important;
-  }
-
-/* 3. Переопределение ховера */
-body .course-card:hover {
-    background-color: var(--culms-dark-bg-hover) !important;  /*BTDEV: course card color */
+    /* ИЗМЕНЕНИЕ: толщина рамки с 1px на 0.5px */
+    box-shadow: 0 0 0 0.5px var(--culms-dark-border-hover-light) inset !important;
 }
 
 .nav {
