@@ -74,6 +74,18 @@
     --cu-island-cover-bg: var(--culms-dark-bg-primary) !important;
     --informer-tui-text-02: var(--culms-dark-text-primary) !important; /*BTDEV: Обращения error color*/
 }
+/*BTDEV: nav text hover*/
+cu-longread-nav .list__item a:hover,
+cu-longread-nav .list__item a:hover span {
+    color: var(--culms-dark-text-link-hover) !important;
+}
+/*BTDEV: profile black text to normal*/
+.change-personal-info-tip,
+.change-personal-info-tip a {
+    color: var(--culms-dark-text-secondary) !important;
+}
+
+
 
 /*BTDEV: Перенести дедлайн исправление*/
 tui-hint {
