@@ -10,7 +10,7 @@ if (typeof window.culmsEmojiSwapInitialized === 'undefined') {
 	const emojiMap = new Map([
 		['🔵', '💙'],
 		['🔴', '❤️'],
-		['⚫️', '🖤']
+		['⚫️', '🖤'],
 	]);
 
 	/**
