@@ -1,20 +1,23 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
-    <title>Dark Theme Control</title>
+    <title>extension control panel</title>
     <style>
         body {
             font-family: sans-serif;
-            width: 200px;
+            width: 350px;
             padding: 10px;
             background-color: #f0f0f0;
         }
+
         .toggle-container {
             display: flex;
             align-items: center;
             justify-content: space-between;
         }
+
         /* Простой CSS для переключателя */
         .switch {
             position: relative;
@@ -22,7 +25,11 @@
             width: 50px;
             height: 24px;
         }
-        .switch input { display: none; }
+
+        .switch input {
+            display: none;
+        }
+
         .slider {
             position: absolute;
             cursor: pointer;
@@ -34,6 +41,7 @@
             transition: .4s;
             border-radius: 24px;
         }
+
         .slider:before {
             position: absolute;
             content: "";
@@ -45,14 +53,17 @@
             transition: .4s;
             border-radius: 50%;
         }
-        input:checked + .slider {
+
+        input:checked+.slider {
             background-color: #2196F3;
         }
-        input:checked + .slider:before {
+
+        input:checked+.slider:before {
             transform: translateX(26px);
         }
     </style>
 </head>
+
 <body>
     <h3>Темная тема</h3>
     <div class="toggle-container">
@@ -62,7 +73,24 @@
             <span class="slider"></span>
         </label>
     </div>
+    <div class="toggle-container" style="margin-top:8px">
+        <span>OLED чёрный:</span>
+        <label class="switch">
+            <input type="checkbox" id="oled-toggle">
+            <span class="slider"></span>
+        </label>
+    </div>
+
+    <h3>Наведение вкусовщины</h3>
+    <div class="toggle-container">
+        <span>Замена кружков на сердечки:</span>
+        <label class="switch">
+            <input type="checkbox" id="emoji-hearts-toggle">
+            <span class="slider"></span>
+        </label>
+    </div>
     <script type="application/javascript" src="browser-polyfill.js"></script>
     <script src="popup.js"></script>
 </body>
+
 </html>

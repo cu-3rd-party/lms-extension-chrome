@@ -39,13 +39,13 @@ function handleNavigation(tabId, url) {
         console.log(`[BG_LOG] Игнорируем URL: ${url}`);
         return;
     }
-    
+
     console.log(`[BG_LOG] Обрабатываем навигацию на ${url}`);
 
     // --- Внедрение скриптов с полифиллом (для тех, что используют browser.* API) ---
     browser.scripting.executeScript({
         target: { tabId: tabId },
-        files: ["browser-polyfill.js", "dark_theme.js"]
+        files: ["browser-polyfill.js", "dark_theme.js", "emoji_swap.js"]
     }).catch(err => console.error(`[BG_LOG] Ошибка внедрения dark_theme.js:`, err));
 
     if (url.includes("/learn/courses/view")) {

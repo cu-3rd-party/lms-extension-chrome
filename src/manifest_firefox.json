@@ -11,9 +11,11 @@
     "host_permissions": [
         "https://my.centraluniversity.ru/*"
     ],
-
     "background": {
-        "service_worker": "background.js"
+        "scripts": [
+            "browser-polyfill.js",
+            "background.js"
+        ]
     },
     "action": {
         "default_popup": "popup.html"
@@ -28,9 +30,9 @@
                 "courses_fix.js",
                 "debug_utils.js",
                 "instant_doc_view_fix.js",
+                "style_oled.css",
                 "emoji_swap.js",
                 "style.css",
-                "style_oled.css",
                 "dark_theme.js",
                 "icons/sun.svg",
                 "icons/moon.svg"
@@ -42,5 +44,10 @@
     ],
     "icons": {
         "128": "icon128.png"
+    },
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "lms-enhancer@your-domain.com"
+        }
     }
 }
