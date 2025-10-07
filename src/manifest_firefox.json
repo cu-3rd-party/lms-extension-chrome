@@ -30,6 +30,7 @@
                 "courses_fix.js",
                 "debug_utils.js",
                 "instant_doc_view_fix.js",
+                "style_oled.css",
                 "emoji_swap.js",
                 "style.css",
                 "dark_theme.js",
