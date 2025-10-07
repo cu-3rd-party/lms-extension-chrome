@@ -30,6 +30,7 @@
                 "debug_utils.js",
                 "instant_doc_view_fix.js",
                 "style.css",
+                "style_oled.css",
                 "dark_theme.js",
                 "icons/sun.svg",
                 "icons/moon.svg"
