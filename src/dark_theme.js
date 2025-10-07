@@ -5,27 +5,46 @@
 if (typeof window.darkThemeInitialized === 'undefined') {
     window.darkThemeInitialized = true;
 
-    const STYLE_ID = 'culms-dark-theme-style';
+    const STYLE_ID_BASE = 'culms-dark-theme-style-base';
+    const STYLE_ID_OLED = 'culms-dark-theme-style-oled';
     let themeToggleButton = null;
 
     /**
      * Применяет или удаляет CSS темной темы со страницы.
      */
-    function applyTheme(isEnabled) {
-        const existingStyle = document.getElementById(STYLE_ID);
-        if (isEnabled) {
-            if (existingStyle) return;
-            // ИЗМЕНЕНО: chrome.runtime -> browser.runtime
-            fetch(browser.runtime.getURL('style.css'))
-                .then(response => response.text())
-                .then(css => {
-                    const style = document.createElement('style');
-                    style.id = STYLE_ID;
-                    style.textContent = css;
-                    document.head.appendChild(style);
-                });
-        } else {
-            if (existingStyle) existingStyle.remove();
+    async function applyTheme(isEnabled) {
+        const base = document.getElementById(STYLE_ID_BASE);
+        const oled = document.getElementById(STYLE_ID_OLED);
+
+        if (!isEnabled) {
+            if (base) base.remove();
+            if (oled) oled.remove();
+            return;
+        }
+
+        // Ensure base dark stylesheet is present
+        if (!base) {
+            const respBase = await fetch(browser.runtime.getURL('style.css'));
+            const cssBase = await respBase.text();
+            const styleBase = document.createElement('style');
+            styleBase.id = STYLE_ID_BASE;
+            styleBase.textContent = cssBase;
+            document.head.appendChild(styleBase);
+        }
+
+        // Apply or remove OLED overrides on top of base
+        const { oledEnabled } = await browser.storage.sync.get('oledEnabled');
+        if (oledEnabled) {
+            if (!document.getElementById(STYLE_ID_OLED)) {
+                const respOled = await fetch(browser.runtime.getURL('style_oled.css'));
+                const cssOled = await respOled.text();
+                const styleOled = document.createElement('style');
+                styleOled.id = STYLE_ID_OLED;
+                styleOled.textContent = cssOled;
+                document.head.appendChild(styleOled);
+            }
+        } else if (oled) {
+            oled.remove();
         }
     }
 
@@ -107,18 +126,25 @@ if (typeof window.darkThemeInitialized === 'undefined') {
 
     // 1. Слушаем изменения в хранилище.
     // ИЗМЕНЕНО: chrome.storage -> browser.storage
-    browser.storage.onChanged.addListener((changes, namespace) => {
-        if (changes.themeEnabled) {
-            applyTheme(!!changes.themeEnabled.newValue);
-            updateButtonState(); // Вызываем асинхронную функцию
+    browser.storage.onChanged.addListener(async (changes, namespace) => {
+        const themeChanged = 'themeEnabled' in changes;
+        const oledChanged = 'oledEnabled' in changes;
+        if (themeChanged || oledChanged) {
+            const data = await browser.storage.sync.get(['themeEnabled', 'oledEnabled']);
+            // Apply base and OLED override accordingly
+            await applyTheme(!!data.themeEnabled);
+            updateButtonState();
+            // Sync ShadowDOM as well
+            toggleShadowDomTheme(!!data.themeEnabled, !!data.oledEnabled);
         }
     });
 
     // 2. Применяем тему при первой загрузке скрипта.
     // ИЗМЕНЕНО: chrome.storage -> browser.storage с .then()
-    browser.storage.sync.get('themeEnabled').then((data) => {
+    browser.storage.sync.get(['themeEnabled', 'oledEnabled']).then((data) => {
         if (data.themeEnabled) {
             applyTheme(true);
+            toggleShadowDomTheme(true, !!data.oledEnabled);
         }
     });
 
@@ -128,11 +154,10 @@ if (typeof window.darkThemeInitialized === 'undefined') {
 
 
     // --- НОВЫЙ БЛОК: Логика для Shadow DOM ---
-    
+
     const SHADOW_STYLE_ID_NEW = 'culms-shadow-theme-fix'; // Уникальный ID для стилей в Shadow DOM
-    
-    // CSS-код для виджета. Он будет внедряться напрямую.
-    const shadowDomCssText = `
+
+    const shadowDomCssTextDark = `
         :host, :root {
             --informer-tui-base-01: rgb(32, 33, 36) !important;
             --informer-tui-base-02: rgb(40, 41, 44) !important;
@@ -140,14 +165,12 @@ if (typeof window.darkThemeInitialized === 'undefined') {
             --informer-tui-elevation-01: rgb(32, 33, 36) !important;
             --informer-tui-background-base: rgb(32, 33, 36) !important;
             --informer-tui-const-white: rgb(32, 33, 36) !important;
-            
             --informer-tui-text-01: rgb(255, 255, 255) !important;
             --informer-tui-text-02: #BDC1C6 !important;
             --informer-tui-text-03: #BDC1C6 !important;
             --informer-tui-text-primary: rgb(255, 255, 255) !important;
             --informer-tui-text-secondary: #BDC1C6 !important;
             --informer-tui-text-tertiary: #BDC1C6 !important;
-            
             --informer-tui-primary: #4285F4 !important;
             --informer-tui-primary-text: #ffffff !important;
             --informer-tui-secondary: rgb(40, 41, 44) !important;
@@ -159,35 +182,47 @@ if (typeof window.darkThemeInitialized === 'undefined') {
         svg path[fill="currentColor"] { fill: #E8EAED !important; }
         button[appearance="whiteblock"] { background-color: rgb(40, 41, 44) !important; border-bottom-color: rgb(55, 56, 60) !important; }
         button[appearance="whiteblock"]:hover { background-color: rgb(55, 56, 60) !important; }
-        
-        .data-list button[appearance="whiteblock"] div.t-wrapper {
-            background-color: rgb(40, 41, 44) !important;
-            border: none !important; /* Сбрасываем все рамки */
-            box-shadow: none !important; /* Убираем тени */
-            border-bottom: 1px solid rgb(55, 56, 60) !important; /* Добавляем свой нижний разделитель */
-        }
+        .data-list button[appearance="whiteblock"] div.t-wrapper { background-color: rgb(40, 41, 44) !important; border: none !important; box-shadow: none !important; border-bottom: 1px solid rgb(55, 56, 60) !important; }
+        .data-list button[appearance="whiteblock"]:hover div.t-wrapper { background-color: rgb(55, 56, 60) !important; border-bottom-color: rgb(85, 86, 90) !important; }
+        .data-list button[appearance="whiteblock"] .title__text { color: #E8EAED !important; }
+        .data-list button[appearance="whiteblock"] informer-copy-category-link-button svg path { fill: #BDC1C6 !important; }
+    `;
 
-        /* Стиль при наведении курсора */
-        .data-list button[appearance="whiteblock"]:hover div.t-wrapper {
-            background-color: rgb(55, 56, 60) !important;
-            border-bottom-color: rgb(85, 86, 90) !important;
+    const shadowDomCssTextOled = `
+        :host, :root {
+            --informer-tui-base-01: #000000 !important;
+            --informer-tui-base-02: #0b0b0b !important;
+            --informer-tui-base-03: #161616 !important;
+            --informer-tui-elevation-01: #000000 !important;
+            --informer-tui-background-base: #000000 !important;
+            --informer-tui-const-white: #000000 !important;
+            --informer-tui-text-01: #ffffff !important;
+            --informer-tui-text-02: #e6e6e6 !important;
+            --informer-tui-text-03: #b3b3b3 !important;
+            --informer-tui-text-primary: #ffffff !important;
+            --informer-tui-text-secondary: #e6e6e6 !important;
+            --informer-tui-text-tertiary: #b3b3b3 !important;
+            --informer-tui-primary: #4285F4 !important;
+            --informer-tui-primary-text: #ffffff !important;
+            --informer-tui-secondary: #0b0b0b !important;
+            --informer-tui-secondary-hover: #161616 !important;
+            --informer-tui-link: #8ab4f8 !important;
         }
-
-        /* Цвет текста внутри кнопки */
-        .data-list button[appearance="whiteblock"] .title__text {
-            color: #E8EAED !important;
-        }
-
-        /* Цвет иконки "копировать ссылку" */
-        .data-list button[appearance="whiteblock"] informer-copy-category-link-button svg path {
-            fill: #BDC1C6 !important;
-        }
-        `;
+        .tui-island, .onbording-popup { background-color: #0b0b0b !important; }
+        .side-buttons button .t-wrapper { background: #111111 !important; }
+        svg path[fill="currentColor"] { fill: #e6e6e6 !important; }
+        button[appearance="whiteblock"] { background-color: #0b0b0b !important; border-bottom-color: #161616 !important; }
+        button[appearance="whiteblock"]:hover { background-color: #161616 !important; }
+        .data-list button[appearance="whiteblock"] div.t-wrapper { background-color: #0b0b0b !important; border: none !important; box-shadow: none !important; border-bottom: 1px solid #161616 !important; }
+        .data-list button[appearance="whiteblock"]:hover div.t-wrapper { background-color: #161616 !important; border-bottom-color: #2e2e2e !important; }
+        .data-list button[appearance="whiteblock"] .title__text { color: #e6e6e6 !important; }
+        .data-list button[appearance="whiteblock"] informer-copy-category-link-button svg path { fill: #b3b3b3 !important; }
+    `;
 
     /**
      * Функция, которая находит все виджеты и применяет/удаляет стили в их Shadow DOM.
      */
-    function toggleShadowDomTheme(isEnabled) {
+    function toggleShadowDomTheme(isEnabled, isOled) {
         const hosts = document.querySelectorAll('informer-widget-element, informer-case-list-element');
         hosts.forEach(host => {
             if (host.shadowRoot) {
@@ -195,10 +230,13 @@ if (typeof window.darkThemeInitialized === 'undefined') {
                 if (isEnabled && !existingStyle) {
                     const style = document.createElement('style');
                     style.id = SHADOW_STYLE_ID_NEW;
-                    style.textContent = shadowDomCssText;
+                    style.textContent = isOled ? shadowDomCssTextOled : shadowDomCssTextDark;
                     host.shadowRoot.appendChild(style);
                 } else if (!isEnabled && existingStyle) {
                     existingStyle.remove();
+                } else if (isEnabled && existingStyle) {
+                    // Switch between dark and oled
+                    existingStyle.textContent = isOled ? shadowDomCssTextOled : shadowDomCssTextDark;
                 }
             }
         });
@@ -206,26 +244,35 @@ if (typeof window.darkThemeInitialized === 'undefined') {
 
     // Наблюдатель за появлением новых виджетов на странице.
     const shadowDomObserver = new MutationObserver(async () => {
-        const data = await browser.storage.sync.get('themeEnabled');
+        const data = await browser.storage.sync.get(['themeEnabled', 'oledEnabled']);
         if (data.themeEnabled) {
-            toggleShadowDomTheme(true);
+            toggleShadowDomTheme(true, !!data.oledEnabled);
         }
     });
 
     // Запускаем наблюдателя.
     shadowDomObserver.observe(document.body, { childList: true, subtree: true });
-    
+
     // Синхронизируем состояние Shadow DOM с основной темой при изменении в хранилище.
     browser.storage.onChanged.addListener((changes, namespace) => {
-        if (changes.themeEnabled) {
-            toggleShadowDomTheme(!!changes.themeEnabled.newValue);
+        if (changes.themeEnabled || changes.oledEnabled) {
+            // themeEnabled controls on/off, oledEnabled controls variant
+            const themeOn = changes.themeEnabled ? !!changes.themeEnabled.newValue : undefined;
+            if (typeof themeOn === 'boolean') {
+                toggleShadowDomTheme(themeOn, !!(changes.oledEnabled ? changes.oledEnabled.newValue : false));
+            } else {
+                // Only variant changed
+                browser.storage.sync.get(['themeEnabled', 'oledEnabled']).then((data) => {
+                    toggleShadowDomTheme(!!data.themeEnabled, !!data.oledEnabled);
+                });
+            }
         }
     });
 
     // И первоначальная проверка при загрузке.
-    browser.storage.sync.get('themeEnabled').then((data) => {
+    browser.storage.sync.get(['themeEnabled', 'oledEnabled']).then((data) => {
         if (data.themeEnabled) {
-            toggleShadowDomTheme(true);
+            toggleShadowDomTheme(true, !!data.oledEnabled);
         }
     });
 }
