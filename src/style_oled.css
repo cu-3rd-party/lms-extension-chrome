@@ -1,13 +1,17 @@
 /* OLED theme: true black backgrounds and high contrast text */
-:root,
-:host {
+:root {
+	--background: #000000 !important;
+	--background-alt: #000000;
+	--background-accent: #111111;
+	--elevation-01: #000000 !important;
+	--elevation-03: #000000;
 	/* Base backgrounds */
-	--culms-dark-bg-primary: #000000;
+	--culms-dark-bg-primary: #000000 !important;
 	/* true black */
-	--culms-dark-bg-secondary: #0b0b0b;
-	--culms-dark-bg-hover: #111111;
-	--culms-dark-bg-hover-light: #161616;
-	--culms-dark-bg-transparent: transparent;
+	--culms-dark-bg-secondary: #0b0b0b !important;
+	--culms-dark-bg-hover: #111111 !important;
+	--culms-dark-bg-hover-light: #161616 !important;
+	--culms-dark-bg-transparent: transparent !important;
 
 	/* Text colors */
 	--culms-dark-text-primary: #ffffff;
