@@ -11,11 +11,9 @@
     "host_permissions": [
         "https://my.centraluniversity.ru/*"
     ],
-
     "background": {
         "service_worker": "background.js"
     },
-
     "action": {
         "default_popup": "popup.html"
     },
@@ -29,6 +27,7 @@
                 "courses_fix.js",
                 "debug_utils.js",
                 "instant_doc_view_fix.js",
+                "emoji_swap.js",
                 "style.css",
                 "style_oled.css",
                 "dark_theme.js",

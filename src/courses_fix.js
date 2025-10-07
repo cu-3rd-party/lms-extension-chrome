@@ -170,7 +170,7 @@ function updateCourseCard(li, courseId, isLocallyArchived, isDarkTheme) {
     const titleElement = paragraphSection.querySelector('h2.course-card__title');
     if (titleElement) {
         titleElement.classList.remove('three-lines-text');
-        titleElement.style.paddingBottom = '32px'; 
+        titleElement.style.paddingBottom = '32px';
     }
 
     let buttonContainer = li.querySelector('.archive-button-container');
@@ -179,24 +179,24 @@ function updateCourseCard(li, courseId, isLocallyArchived, isDarkTheme) {
         buttonContainer.className = 'archive-button-container';
         paragraphSection.appendChild(buttonContainer);
     }
-    
-    buttonContainer.style.cssText = ''; 
+
+    buttonContainer.style.cssText = '';
     buttonContainer.style.position = 'absolute';
     buttonContainer.style.right = '-0.3rem';
     buttonContainer.style.bottom = '-0.5rem';
-    
+
     buttonContainer.innerHTML = '';
 
     const archiveButton = document.createElement('button');
     archiveButton.style.cssText = `background: none; border: none; padding: 0; cursor: pointer; line-height: 0;`;
-    
+
     const iconSpan = document.createElement('span');
 
     // ИЗМЕНЕНО: chrome.runtime -> browser.runtime
     const iconUrl = isLocallyArchived
         ? browser.runtime.getURL('icons/unarchive.svg')
         : browser.runtime.getURL('icons/archive.svg');
-    
+
     const iconColor = isDarkTheme ? 'white' : '#4b5563';
 
     iconSpan.style.display = 'inline-block';
