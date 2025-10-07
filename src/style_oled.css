@@ -48,22 +48,41 @@
 }
 
 /* Minimal overrides that rely on existing dark theme selectors */
-body .course-card,
-body .course-card * {
+
+/* Базовый стиль для карточки курса */
+body .course-card {
 	background-color: var(--culms-dark-bg-primary) !important;
 	--cu-island-color-bg: var(--culms-dark-bg-primary) !important;
 	--cu-island-color-bg-hover: var(--culms-dark-bg-hover) !important;
+	/* Добавляем плавный переход для фона */
+	transition: background-color 0.2s ease-in-out;
+}
+
+/* Цвет текста для всех дочерних элементов карточки */
+body .course-card * {
 	color: var(--culms-dark-text-primary) !important;
 }
 
+/* Стиль псевдо-элемента для рамки */
 .tui-island::before {
 	display: block !important;
 	border: 1px solid var(--culms-dark-border-primary) !important;
+	/* Добавляем плавный переход для цвета рамки */
+	transition: border-color 0.2s ease-in-out;
 }
 
+/* --- ИСПРАВЛЕНИЕ HOVER-ЭФФЕКТА --- */
+
+/* При наведении на ссылку, меняем фон самой карточки */
+a:hover .course-card {
+    background-color: var(--cu-island-color-bg-hover) !important;
+}
+
+/* При наведении на ссылку, меняем цвет рамки */
 a:hover .tui-island::before {
 	border-color: var(--culms-dark-border-hover-light) !important;
 }
+
 
 /* Global surfaces */
 .content-wrapper,
