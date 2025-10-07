@@ -1,46 +1,184 @@
-// tasks_fix.js (финальная версия с умным предохранителем)
+// tasks_fix.js (финальная версия с точной подсветкой статуса)
 'use strict';
 
+// --- БЛОК ОЧИСТКИ ФИЛЬТРОВ В LOCALSTORAGE ---
+(function cleanFiltersInLocalStorage() {
+    const filterKey = 'cu.lms.actual-student-tasks-filter';
+    try {
+        const storedFilterJSON = localStorage.getItem(filterKey);
+        if (storedFilterJSON) {
+            const filterData = JSON.parse(storedFilterJSON);
+            if (filterData.course?.length > 0 || filterData.state?.length > 0) {
+                console.log('Task Status Updater: Found default filters in localStorage. Cleaning them...', filterData);
+                filterData.course = [];
+                filterData.state = [];
+                localStorage.setItem(filterKey, JSON.stringify(filterData));
+                console.log('Task Status Updater: Filters cleaned. The site will now fetch all tasks.');
+            }
+        }
+    } catch (error) {
+        console.error('Task Status Updater: Failed to clean localStorage filters.', error);
+    }
+})();
+
 /**
- * Главная функция-обертка, которая решает, нужно ли запускать основную логику.
+ * Главная функция-обертка.
  */
 function initializeTasksFix() {
-    // --- НОВЫЙ, УМНЫЙ ПРЕДОХРАНИТЕЛЬ ---
-    // Проверяем, есть ли уже на странице результат работы скрипта (колонка "Вес").
-    // Если есть, значит, мы уже отработали и ничего делать не нужно.
     if (document.querySelector('[data-culms-weight-header]')) {
-        console.log('Task Status Updater: Already initialized on this page. Skipping.');
+        console.log('Task Status Updater: Already initialized. Skipping.');
         return;
     }
-
-    // Если колонки нет, запускаем основную логику.
     runLogic();
 }
 
 /**
- * Основная логика: ожидание элементов и их обновление.
+ * Основная логика: ожидание элементов, обновление данных и настройка фильтра.
  */
 async function runLogic() {
     try {
         await waitForElement('tr[class*="task-table__task"]');
         console.log('Task Status Updater: Task rows found, running updates.');
-        await new Promise(resolve => setTimeout(resolve, 100));
+        
         addWeightColumnHeader();
         const tasksData = await fetchTasksData();
         if (tasksData && tasksData.length > 0) {
            updateTaskStatuses(tasksData);
         }
+        
+        initializeAllFilters();
+        setupDropdownInterceptor();
+
     } catch (error) {
         console.error('Task Status Updater: Error in runLogic:', error);
     }
 }
 
-// --- Все остальные функции остаются без изменений ---
 
+// --- БЛОК ЛОГИКИ ДЛЯ ДВУХ НЕЗАВИСИМЫХ ФИЛЬТРОВ ---
+
+const HARDCODED_STATUSES = ["В работе", "Есть решение", "Ревью", "Бэклог", "Аудиторная"];
+const selectedStatuses = new Set(HARDCODED_STATUSES);
+const allAvailableCourses = new Set();
+const selectedCourses = new Set();
+
+function initializeAllFilters() {
+    allAvailableCourses.clear();
+    document.querySelectorAll('tr[class*="task-table__task"] .task-table__course-name').forEach(el => {
+        const courseName = el.textContent.trim();
+        if (courseName) allAvailableCourses.add(courseName);
+    });
+    allAvailableCourses.forEach(course => selectedCourses.add(course));
+}
+
+function applyCombinedFilter() {
+    document.querySelectorAll('tr[class*="task-table__task"]').forEach(row => {
+        const statusEl = row.querySelector('.state-chip');
+        const courseEl = row.querySelector('.task-table__course-name');
+        
+        if (statusEl && courseEl) {
+            const rowStatus = statusEl.textContent.trim();
+            const rowCourse = courseEl.textContent.trim();
+            const isStatusVisible = selectedStatuses.has(rowStatus);
+            const isCourseVisible = selectedCourses.has(rowCourse);
+            row.style.display = (isStatusVisible && isCourseVisible) ? '' : 'none';
+        }
+    });
+}
+
+function handleStatusFilterClick(event) {
+    const optionButton = event.target.closest('button[tuioption]');
+    if (!optionButton) return;
+    updateSelection(selectedStatuses, optionButton.textContent.trim(), optionButton);
+    applyCombinedFilter();
+}
+
+function handleCourseFilterClick(event) {
+    const optionButton = event.target.closest('button[tuioption]');
+    if (!optionButton) return;
+    updateSelection(selectedCourses, optionButton.textContent.trim(), optionButton);
+    applyCombinedFilter();
+}
+
+function updateSelection(selectionSet, text, button) {
+    if (selectionSet.has(text)) selectionSet.delete(text);
+    else selectionSet.add(text);
+    const isSelected = selectionSet.has(text);
+    button.classList.toggle('t-option_selected', isSelected);
+    button.setAttribute('aria-selected', isSelected.toString());
+    const checkbox = button.querySelector('input[tuicheckbox]');
+    if (checkbox) checkbox.checked = isSelected;
+}
+
+function setupDropdownInterceptor() {
+    const observer = new MutationObserver((mutationsList) => {
+        for (const mutation of mutationsList) {
+            for (const node of mutation.addedNodes) {
+                if (node.nodeType !== 1 || !node.matches('tui-dropdown')) continue;
+                const dataListWrapper = node.querySelector('tui-data-list-wrapper.multiselect__dropdown');
+                if (!dataListWrapper) continue;
+                const statusFilterContainer = document.querySelector('cu-multiselect-filter[controlname="state"]');
+                const courseFilterContainer = document.querySelector('cu-multiselect-filter[controlname="course"]');
+                if (!dataListWrapper.dataset.culmsRebuilt && statusFilterContainer && statusFilterContainer.contains(document.activeElement)) {
+                    buildDropdown(dataListWrapper, 'state');
+                }
+                else if (!dataListWrapper.dataset.culmsRebuilt && courseFilterContainer && courseFilterContainer.contains(document.activeElement)) {
+                    buildDropdown(dataListWrapper, 'course');
+                }
+            }
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+}
+
+function buildDropdown(dataListWrapper, type) {
+    dataListWrapper.dataset.culmsRebuilt = 'true';
+    const dataList = dataListWrapper.querySelector('tui-data-list');
+    if (!dataList) return;
+    dataList.innerHTML = ''; 
+    if (type === 'state') {
+        HARDCODED_STATUSES.forEach(text => dataList.appendChild(createFilterOption(text, selectedStatuses.has(text))));
+        dataListWrapper.addEventListener('click', handleStatusFilterClick);
+    } else if (type === 'course') {
+        initializeAllFilters();
+        const sortedCourses = [...allAvailableCourses].sort();
+        sortedCourses.forEach(text => dataList.appendChild(createFilterOption(text, selectedCourses.has(text))));
+        dataListWrapper.addEventListener('click', handleCourseFilterClick);
+    }
+}
+
+function createFilterOption(text, isSelected) {
+    const button = document.createElement('button');
+    button.className = 'ng-star-inserted';
+    if (isSelected) button.classList.add('t-option_selected');
+    button.setAttribute('tuiicons', ''); button.setAttribute('type', 'button'); button.setAttribute('role', 'option');
+    button.setAttribute('automation-id', 'tui-data-list-wrapper__option'); button.setAttribute('tuielement', '');
+    button.setAttribute('tuioption', ''); button.setAttribute('aria-selected', isSelected.toString());
+    const finalStyle = `pointer-events: none; --t-checked-icon: url(assets/cu/icons/cuIconCheck.svg); --t-indeterminate-icon: url(assets/cu/icons/cuIconMinus.svg);`;
+    button.innerHTML = `
+        <tui-multi-select-option>
+            <input tuiappearance tuicheckbox type="checkbox" class="_readonly" data-appearance="primary" data-size="s" style="${finalStyle}">
+            <span class="t-content ng-star-inserted"> ${text} </span>
+        </tui-multi-select-option>`;
+    const checkbox = button.querySelector('input[tuicheckbox]');
+    if (checkbox) checkbox.checked = isSelected;
+    return button;
+}
+
+// --- Остальной код ---
+
+/**
+ * Обновляет статусы задач и добавляет подсветку. (ИЗМЕНЕННАЯ ФУНКЦИЯ)
+ */
 function updateTaskStatuses(tasksData) {
     document.querySelectorAll('tr[class*="task-table__task"]').forEach(row => {
         const statusElement = row.querySelector('.state-chip');
         if (!statusElement) return;
+        
+        // Сбрасываем кастомные стили перед проверкой
+        statusElement.style.backgroundColor = '';
+        statusElement.style.color = '';
+
         const htmlNames = extractTaskAndCourseNamesFromElement(statusElement);
         const task = findMatchingTask(htmlNames, tasksData);
         if (task) {
@@ -53,6 +191,10 @@ function updateTaskStatuses(tasksData) {
                 if (task.submitAt !== null && statusElement.textContent.includes('В работе')) {
                     statusElement.textContent = 'Есть решение';
                     statusElement.setAttribute('data-culms-status', 'solved');
+                    
+                    // --- ЛАСТ ФИКС: ТОЧНЫЕ ЦВЕТА КАК НА СКРИНШОТЕ ---
+                    statusElement.style.backgroundColor = '#5cb85c'; // Зеленый фон
+                    statusElement.style.color = '#ffffff';       // Белый текст
                 }
             }
             const weight = task.exercise?.activity?.weight;
@@ -132,5 +274,4 @@ function waitForElement(selector, timeout = 10000) {
 }
 
 // --- Запуск скрипта ---
-// Теперь мы запускаем главную функцию-обертку, а не runLogic напрямую.
 initializeTasksFix();
