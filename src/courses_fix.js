@@ -1,4 +1,4 @@
-// courses_fix.js (финальная версия, без всплывающей подсказки)
+// courses_fix.js (кросс-браузерная версия)
 'use strict';
 
 /**
@@ -18,7 +18,8 @@ async function initializeCourseArchiver() {
     try {
         await waitForElement('ul.course-list', 10000);
         await renderCoursesBasedOnState();
-        chrome.storage.onChanged.addListener((changes) => {
+        // ИЗМЕНЕНО: chrome.storage -> browser.storage
+        browser.storage.onChanged.addListener((changes) => {
             if (changes.themeEnabled) {
                 renderCoursesBasedOnState();
             }
@@ -50,7 +51,8 @@ async function fetchAllCoursesData() {
 
 async function getArchivedCoursesFromStorage() {
     try {
-        const data = await chrome.storage.local.get('archivedCourseIds');
+        // ИЗМЕНЕНО: chrome.storage -> browser.storage
+        const data = await browser.storage.local.get('archivedCourseIds');
         return new Set(data.archivedCourseIds || []);
     } catch (e) {
         console.error("Course Archiver: Error getting data from storage", e);
@@ -60,7 +62,8 @@ async function getArchivedCoursesFromStorage() {
 
 async function setArchivedCoursesInStorage(archivedCourseIds) {
     try {
-        await chrome.storage.local.set({ archivedCourseIds: Array.from(archivedCourseIds) });
+        // ИЗМЕНЕНО: chrome.storage -> browser.storage
+        await browser.storage.local.set({ archivedCourseIds: Array.from(archivedCourseIds) });
     } catch (e) {
         console.error("Course Archiver: Error saving data to storage", e);
     }
@@ -75,7 +78,8 @@ async function renderCoursesBasedOnState() {
     const isOnActivePage = currentPath.includes('/courses/view/actual');
     if (!isOnActivePage && !isOnArchivedPage) return;
 
-    const themeData = await chrome.storage.sync.get('themeEnabled');
+    // ИЗМЕНЕНО: chrome.storage -> browser.storage
+    const themeData = await browser.storage.sync.get('themeEnabled');
     const isDarkTheme = !!themeData.themeEnabled;
 
     const storedArchivedCourseIds = await getArchivedCoursesFromStorage();
@@ -161,14 +165,11 @@ function updateCourseCard(li, courseId, isLocallyArchived, isDarkTheme) {
     const paragraphSection = li.querySelector('section.tui-island__paragraph');
     if (!paragraphSection) return;
 
-    // 1. Устанавливаем секции ПОЛНУЮ ВЫСОТУ и делаем ее точкой отсчета.
     paragraphSection.style.cssText = 'position: relative; height: 100%;';
 
     const titleElement = paragraphSection.querySelector('h2.course-card__title');
     if (titleElement) {
-        // Убираем класс, обрезающий текст.
         titleElement.classList.remove('three-lines-text');
-        // Добавим немного отступа снизу, чтобы текст не наезжал на кнопку.
         titleElement.style.paddingBottom = '32px'; 
     }
 
@@ -179,9 +180,7 @@ function updateCourseCard(li, courseId, isLocallyArchived, isDarkTheme) {
         paragraphSection.appendChild(buttonContainer);
     }
     
-    // 2. Позиционируем кнопку абсолютно относительно правого нижнего угла секции.
-    // Отступы в '1rem' (или 16px) должны совпадать с внутренними отступами карточки.
-    buttonContainer.style.cssText = ''; // Сброс
+    buttonContainer.style.cssText = ''; 
     buttonContainer.style.position = 'absolute';
     buttonContainer.style.right = '-0.3rem';
     buttonContainer.style.bottom = '-0.5rem';
@@ -193,9 +192,10 @@ function updateCourseCard(li, courseId, isLocallyArchived, isDarkTheme) {
     
     const iconSpan = document.createElement('span');
 
+    // ИЗМЕНЕНО: chrome.runtime -> browser.runtime
     const iconUrl = isLocallyArchived
-        ? chrome.runtime.getURL('icons/unarchive.svg')
-        : chrome.runtime.getURL('icons/archive.svg');
+        ? browser.runtime.getURL('icons/unarchive.svg')
+        : browser.runtime.getURL('icons/archive.svg');
     
     const iconColor = isDarkTheme ? 'white' : '#4b5563';
 

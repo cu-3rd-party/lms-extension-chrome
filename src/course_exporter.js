@@ -1,3 +1,4 @@
+// currently disabled; 
 // course-exporter.js
 
 // Весь код обернут в Немедленно Вызываемую Функциональную Экспрессию (IIFE)
@@ -331,7 +332,7 @@
         // 5. Вывод результатов в консоль
         window.cuLmsLog('====================================================');
         window.cuLmsLog('🚀 ALL COURSE DATA EXPORTED SUCCESSFULLY:');
-        console.log(JSON.stringify(results, null, 2));
+        window.cuLmsLog(JSON.stringify(results, null, 2));
         window.cuLmsLog('====================================================');
     }
 
