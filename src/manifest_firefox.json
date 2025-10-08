@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "CU LMS Enhancer",
-    "version": "1.0",
+    "version": "1.3",
     "description": "Неофициальная доработка CU LMS, возвращает утерянные функции, добавляет темную тему, отображение весов заданий",
     "permissions": [
         "storage",
@@ -47,7 +47,7 @@
     },
     "browser_specific_settings": {
         "gecko": {
-            "id": "lms-enhancer@your-domain.com"
+            "id": "cu-lms-enhancer@centraluniversity.ru"
         }
     }
 }
