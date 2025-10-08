@@ -16,7 +16,7 @@ function initializeCourseFix() {
  */
 async function initializeCourseArchiver() {
     try {
-        await waitForElement('ul.course-list');
+        await waitForElement('ul.course-list', 10000);
         await renderCoursesBasedOnState();
         // ИЗМЕНЕНО: chrome.storage -> browser.storage
         browser.storage.onChanged.addListener((changes) => {
@@ -227,7 +227,7 @@ function updateCourseCard(li, courseId, isLocallyArchived, isDarkTheme) {
 }
 
 
-function waitForElement(selector, timeout = 100) {
+function waitForElement(selector, timeout = 10000) {
     return new Promise((resolve, reject) => {
         const element = document.querySelector(selector);
         if (element) return resolve(element);

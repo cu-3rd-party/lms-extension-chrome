@@ -77,7 +77,7 @@ if (typeof window.culmsEmojiSwapInitialized === 'undefined') {
                 console.log('Emoji Swap: Fallback timer fired. Initializing.');
                 window.removeEventListener('culms-tasks-fix-complete', onTasksFixComplete);
                 safeInitializeAndObserve();
-            }, 200);
+            }, 2000);
 
             // 2. Определяем, что делать, когда придет сигнал
             const onTasksFixComplete = () => {
