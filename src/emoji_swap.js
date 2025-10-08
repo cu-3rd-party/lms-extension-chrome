@@ -42,7 +42,7 @@ if (typeof window.culmsEmojiSwapInitialized === 'undefined') {
             if (el.shadowRoot) replaceInSubtree(el.shadowRoot, enable);
         });
     }
-    
+
     // Наблюдатель (без изменений, но будет запускаться позже)
     const observer = new MutationObserver(() => {
         if (currentEnabled) runSwap(true);
@@ -56,7 +56,7 @@ if (typeof window.culmsEmojiSwapInitialized === 'undefined') {
     function safeInitializeAndObserve() {
         if (observerInitialized) return; // Защита от повторного запуска
         observerInitialized = true;
-        
+
         console.log('Emoji Swap: Safe to initialize. Running first swap and starting observer.');
         runSwap(true); // Первый запуск
         observer.observe(document.body, { subtree: true, childList: true, characterData: true });
@@ -101,7 +101,7 @@ if (typeof window.culmsEmojiSwapInitialized === 'undefined') {
     browser.storage.onChanged.addListener(changes => {
         if (changes.emojiHeartsEnabled) {
             // Перезагрузка страницы, чтобы применить новую логику ожидания
-            window.location.reload(); 
+            window.location.reload();
         }
     });
 

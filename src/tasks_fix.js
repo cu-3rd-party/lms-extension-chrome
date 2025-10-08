@@ -61,16 +61,16 @@ async function runLogic() {
 
         const settings = await browser.storage.sync.get('emojiHeartsEnabled');
         const isEmojiSwapEnabled = !!settings.emojiHeartsEnabled;
-        
+
         const tasksData = await fetchTasksData();
         buildTableStructure();
 
         if (tasksData && tasksData.length > 0) {
             populateTableData(tasksData, isEmojiSwapEnabled);
         }
-        
+
         // Инициализируем фильтры один раз после полной обработки
-        initializeFilters(); 
+        initializeFilters();
         setupDropdownInterceptor();
 
     } catch (error) {
@@ -134,7 +134,7 @@ function buildTableStructure() {
         if (originalScoreCell && stateCell) {
             const weightCell = originalScoreCell.cloneNode(true);
             weightCell.setAttribute('data-culms-weight-cell', 'true');
-            weightCell.textContent = ''; 
+            weightCell.textContent = '';
             stateCell.parentNode.insertBefore(weightCell, stateCell.nextSibling);
         }
     });
@@ -154,18 +154,18 @@ function populateTableData(tasksData, isEmojiSwapEnabled) {
 
         const htmlNames = extractTaskAndCourseNamesFromElement(statusElement);
         const task = findMatchingTask(htmlNames, tasksData);
-        
+
         if (task) {
             if (task.exercise?.activity?.name === 'Аудиторная работа') {
                 statusElement.textContent = 'Аудиторная';
                 statusElement.setAttribute('data-culms-status', 'seminar');
                 row.setAttribute('data-culms-row-type', 'seminar');
-            } 
+            }
             else if (task.submitAt !== null && (statusElement.textContent.includes('В работе') || statusElement.textContent.includes('Есть решение'))) {
                 statusElement.textContent = 'Есть решение';
                 statusElement.setAttribute('data-culms-status', 'solved');
             }
-            
+
             const weight = task.exercise?.activity?.weight;
             weightCell.textContent = (weight !== undefined && weight !== null) ? `${Math.round(weight * 100)}%` : '';
         } else {
@@ -280,15 +280,17 @@ function updateSelection(selectionSet, text, button) {
 }
 function setupDropdownInterceptor() {
     const observer = new MutationObserver((mutationsList) => {
-        for (const mutation of mutationsList) { for (const node of mutation.addedNodes) {
-            if (node.nodeType !== 1 || !node.matches('tui-dropdown')) continue;
-            const dataListWrapper = node.querySelector('tui-data-list-wrapper.multiselect__dropdown');
-            if (!dataListWrapper) continue;
-            const statusFilterContainer = document.querySelector('cu-multiselect-filter[controlname="state"]');
-            const courseFilterContainer = document.querySelector('cu-multiselect-filter[controlname="course"]');
-            if (!dataListWrapper.dataset.culmsRebuilt && statusFilterContainer?.contains(document.activeElement)) buildDropdown(dataListWrapper, 'state');
-            else if (!dataListWrapper.dataset.culmsRebuilt && courseFilterContainer?.contains(document.activeElement)) buildDropdown(dataListWrapper, 'course');
-        }}
+        for (const mutation of mutationsList) {
+            for (const node of mutation.addedNodes) {
+                if (node.nodeType !== 1 || !node.matches('tui-dropdown')) continue;
+                const dataListWrapper = node.querySelector('tui-data-list-wrapper.multiselect__dropdown');
+                if (!dataListWrapper) continue;
+                const statusFilterContainer = document.querySelector('cu-multiselect-filter[controlname="state"]');
+                const courseFilterContainer = document.querySelector('cu-multiselect-filter[controlname="course"]');
+                if (!dataListWrapper.dataset.culmsRebuilt && statusFilterContainer?.contains(document.activeElement)) buildDropdown(dataListWrapper, 'state');
+                else if (!dataListWrapper.dataset.culmsRebuilt && courseFilterContainer?.contains(document.activeElement)) buildDropdown(dataListWrapper, 'course');
+            }
+        }
     });
     observer.observe(document.body, { childList: true, subtree: true });
 }
@@ -297,7 +299,7 @@ function buildDropdown(dataListWrapper, type) {
     dataListWrapper.dataset.culmsRebuilt = 'true';
     const dataList = dataListWrapper.querySelector('tui-data-list');
     if (!dataList) return;
-    dataList.innerHTML = ''; 
+    dataList.innerHTML = '';
     if (type === 'state') {
         HARDCODED_STATUSES.forEach(text => dataList.appendChild(createFilterOption(text, selectedStatuses.has(text))));
         dataListWrapper.addEventListener('click', handleStatusFilterClick);

@@ -11,7 +11,6 @@
     "host_permissions": [
         "https://my.centraluniversity.ru/*"
     ],
-
     "background": {
         "service_worker": "background.js"
     },

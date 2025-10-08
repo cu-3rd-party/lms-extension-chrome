@@ -14,7 +14,7 @@
     let tasksCache = {};
 
     const COURSE_SCAN_DELAY_MS = 1000; // Задержка между запросами (в мс)
-    
+
     // Mock-функция лога, чтобы избежать ошибок, если она не определена
     if (!window.cuLmsLog) {
         window.cuLmsLog = console.log;
@@ -109,7 +109,7 @@
             return null;
         }
     }
-    
+
     /**
      * Получает финальную ссылку на скачивание файла.
      * Мы не используем оригинальную getDownloadUrl, так как она полагается на DOM,
@@ -118,10 +118,10 @@
      */
     async function getDownloadLinkApi(filename, version) {
         const encodedFilenameForDownloadLink = encodeURIComponent(filename)
-                                                .replace(/\//g, '%2F');
+            .replace(/\//g, '%2F');
 
         const downloadLinkApiUrl = `https://my.centraluniversity.ru/api/micro-lms/content/download-link?filename=${encodedFilenameForDownloadLink}&version=${version}`;
-        
+
         try {
             const response = await fetch(downloadLinkApiUrl, {
                 method: "GET",
@@ -173,7 +173,7 @@
                 id: course.id,
                 name: course.name,
                 isArchived: course.isArchived,
-                themes: [] 
+                themes: []
             }));
         } catch (error) {
             window.cuLmsLog('Error fetching student courses:', error);
@@ -205,7 +205,7 @@
                 longreads: theme.longreads.map(longread => ({
                     id: longread.id,
                     name: longread.name,
-                    downloadUrls: [] 
+                    downloadUrls: []
                 }))
             }));
         } catch (error) {
@@ -220,7 +220,7 @@
     async function scanLongreadMaterials(longreadId) {
         const downloadUrls = [];
         const materialsData = await fetchMaterials(longreadId);
-        
+
         if (!materialsData || !materialsData.items) {
             window.cuLmsLog(`No materials data for longread ${longreadId}.`);
             return downloadUrls;
@@ -230,7 +230,7 @@
 
         for (const item of materialsData.items) {
             const filesToProcess = [];
-            
+
             // Case 1 & 2: Файлы в item.attachments или item.content (для типа 'file')
             if (item.attachments && item.attachments.length > 0) {
                 filesToProcess.push(...item.attachments);
@@ -238,38 +238,38 @@
             if (item.discriminator === "file" && item.content) {
                 filesToProcess.push(item.content);
             } else if (item.discriminator === "file" && item.filename && item.version) {
-                 filesToProcess.push({ name: item.filename, filename: item.filename, version: item.version });
+                filesToProcess.push({ name: item.filename, filename: item.filename, version: item.version });
             }
 
             // Case 3: Файлы в student's solution (через Task API)
             if (item.taskId || (item.task && item.task.id)) {
                 const taskId = item.taskId || item.task.id;
-                
+
                 // Делаем таймаут перед запросом деталей таска
-                await delay(COURSE_SCAN_DELAY_MS); 
-                
+                await delay(COURSE_SCAN_DELAY_MS);
+
                 const taskDetails = await fetchTaskDetails(taskId);
-                
+
                 if (taskDetails && taskDetails.solution && taskDetails.solution.attachments && taskDetails.solution.attachments.length > 0) {
-                     filesToProcess.push(...taskDetails.solution.attachments);
+                    filesToProcess.push(...taskDetails.solution.attachments);
                 }
             }
-            
+
             // Получаем ссылку для каждого найденного файла
             for (const file of filesToProcess) {
                 if (!file.filename || !file.version || !file.name) continue;
 
                 window.cuLmsLog(`---> Getting download link for file: ${file.name}`);
-                
+
                 const url = await getDownloadLinkApi(file.filename, file.version);
                 if (url) {
-                     downloadUrls.push({
+                    downloadUrls.push({
                         fileName: file.name,
                         fullDownloadLink: url
                     });
                 }
             }
-            
+
             await delay(COURSE_SCAN_DELAY_MS); // Задержка после обработки каждого материала
         }
 
@@ -286,7 +286,7 @@
         }
 
         window.cuLmsLog('Starting course data export...');
-        
+
         // 1. Получаем список курсов
         let studentCourses = await fetchStudentCourses();
         if (studentCourses.length === 0) {
@@ -296,13 +296,13 @@
 
         const coursesToProcess = processAll ? studentCourses : studentCourses.slice(0, 2);
         const results = [];
-        
+
         window.cuLmsLog(`Processing ${coursesToProcess.length} courses... (processAll: ${processAll})`);
 
         // 2. Итерируемся по курсам
         for (const course of coursesToProcess) {
             window.cuLmsLog(`\n✅ Processing course: ${course.name} (ID: ${course.id})`);
-            
+
             // Запрос обзора курса
             const themes = await fetchCourseOverview(course.id);
             await delay(COURSE_SCAN_DELAY_MS * 3);
@@ -311,13 +311,13 @@
             for (const theme of themes) {
                 for (const longread of theme.longreads) {
                     window.cuLmsLog(`\n---> Processing longread: ${longread.name} (ID: ${longread.id})`);
-                    
+
                     // Сканирование материалов и получение ссылок
                     longread.downloadUrls = await scanLongreadMaterials(longread.id);
                     await delay(COURSE_SCAN_DELAY_MS * 2); // Дополнительная задержка после лонгрида
                 }
             }
-            
+
             results.push({
                 id: course.id,
                 name: course.name,
@@ -345,12 +345,12 @@
         const isExporterEnabled = localStorage.getItem('cuLmsExporterEnabled') === 'true';
 
         // ИЗМЕНИТЕ ЗДЕСЬ, ЧТОБЫ СКАНДРОВАТЬ ВСЕ КУРСЫ:
-        const processAllCourses = false; 
+        const processAllCourses = false;
 
         if (isExporterEnabled) {
             window.cuLmsLog('Course Exporter is ENABLED in localStorage. Starting scan...');
             // Запускаем экспорт с таймаутом, чтобы дать странице полностью загрузиться
-            setTimeout(() => exportCourseData(processAllCourses), 1000); 
+            setTimeout(() => exportCourseData(processAllCourses), 1000);
         } else {
             window.cuLmsLog('Course Exporter is DISABLED in localStorage. Skipping scan.');
         }
