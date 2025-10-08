@@ -320,6 +320,37 @@ button:hover .cu-navtab__main-element-text {
     color: var(--culms-dark-text-link-hover) !important; 
   }
 
+/*BTDEV: active left pannel object fixes*/
+/* 1. Базовые стили для ссылок (убираем жирность) */
+.cu-navtab__main-element {
+    font-weight: normal !important; /* Убираем жирность по вашему запросу */
+    border-radius: 8px !important;  /* Скругление для создания формы "пилюли" */
+    padding: 8px 12px !important;
+    transition: background-color 0.2s ease, color 0.2s ease !important;
+    outline: none !important; /* Убираем стандартную синюю рамку */
+}
+
+/* 2. Стиль для АКТИВНОГО раздела (например, "Актуальные" на скриншоте) */
+.cu-navtab__main-element.cu-navtab__main-element_active {
+    background-color: var(--culms-dark-bg-secondary) !important; /* Светло-серый фон, как на картинке */
+    color: #0d6efd !important; /* Синий цвет текста */
+}
+
+/* 3. Стиль для ФОКУСА С КЛАВИАТУРЫ (решение вашей проблемы) */
+/* Теперь при переключении Tab'ом элемент будет подсвечиваться точно так же */
+.cu-navtab__main-element:focus-visible {
+    background-color: var(--culms-dark-bg-secondary) !important; /* Применяем тот же светло-серый фон */
+    color: #0d6efd !important; /* И тот же синий цвет текста */
+}
+
+/* 4. (Опционально, но рекомендуется) Стиль для наведения мыши */
+/* Добавляет легкую подсветку при наведении на неактивные элементы */
+.cu-navtab__main-element:not(.cu-navtab__main-element_active):hover {
+    background-color: var(--culms-dark-bg-secondary) !important;
+}
+
+
+
 /*BTDEV: tasks ui hover fix color*/
 .task-table__task:hover td {
     background-color: var(--culms-dark-bg-hover) !important;
