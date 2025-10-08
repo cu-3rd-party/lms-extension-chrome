@@ -1,105 +1,113 @@
+// emoji_swap.js (ФИНАЛЬНАЯ ВЕРСИЯ С КООРДИНАЦИЕЙ)
 'use strict';
 
 // Prevent double init
 if (typeof window.culmsEmojiSwapInitialized === 'undefined') {
-	window.culmsEmojiSwapInitialized = true;
+    window.culmsEmojiSwapInitialized = true;
 
-	// ── Emoji maps (include VS16 variants where it matters)
-	const toHearts = new Map([
-		['🔵', '💙'],
-		['🔴', '❤️'],
-		['⚫️', '🖤'], // U+26AB + VS16
-		['⚫', '🖤'], // U+26AB (no VS16)
-	]);
+    // Emoji maps (без изменений)
+    const toHearts = new Map([
+        ['🔵', '💙'], ['🔴', '❤️'], ['⚫️', '🖤'], ['⚫', '🖤'],
+    ]);
+    const toCircles = new Map([
+        ['💙', '🔵'], ['❤️', '🔴'], ['🖤', '⚫️'],
+    ]);
 
-	// Inverse map for reverting back to circles
-	const toCircles = new Map([
-		['💙', '🔵'],
-		['❤️', '🔴'],
-		['🖤', '⚫️'], // prefer the VS16 "⚫️" appearance on revert
-	]);
+    let currentEnabled = false;
+    let observerInitialized = false;
 
-	let currentEnabled = false; // remember the current mode
+    // Функции-помощники (без изменений)
+    function replaceWithMap(str, map) {
+        let out = str;
+        for (const [from, to] of map) {
+            if (out.includes(from)) out = out.split(from).join(to);
+        }
+        return out;
+    }
+    function replaceInTextNode(textNode, enable) {
+        if (!textNode || textNode.nodeType !== Node.TEXT_NODE) return;
+        const map = enable ? toHearts : toCircles;
+        const next = replaceWithMap(textNode.nodeValue, map);
+        if (next !== textNode.nodeValue) textNode.nodeValue = next;
+    }
+    function replaceInSubtree(root, enable) {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+        while (walker.nextNode()) {
+            replaceInTextNode(walker.currentNode, enable);
+        }
+    }
+    function runSwap(enable) {
+        replaceInSubtree(document.body, enable);
+        document.querySelectorAll('*').forEach(el => {
+            if (el.shadowRoot) replaceInSubtree(el.shadowRoot, enable);
+        });
+    }
 
-	// Generic replace helper for a string using a Map
-	function replaceWithMap(str, map) {
-		let out = str;
-		for (const [from, to] of map) {
-			if (out.includes(from)) out = out.split(from).join(to);
-		}
-		return out;
-	}
+    // Наблюдатель (без изменений, но будет запускаться позже)
+    const observer = new MutationObserver(() => {
+        if (currentEnabled) runSwap(true);
+    });
 
-	// Replace in a single text node for a given direction ("enable" = toHearts, "disable" = toCircles)
-	function replaceInTextNode(textNode, enable) {
-		if (!textNode || textNode.nodeType !== Node.TEXT_NODE) return;
-		const map = enable ? toHearts : toCircles;
-		const next = replaceWithMap(textNode.nodeValue, map);
-		if (next !== textNode.nodeValue) textNode.nodeValue = next;
-	}
+    /**
+     * ГЛАВНАЯ ФУНКЦИЯ ЗАПУСКА
+     * Выполняет первую замену и запускает постоянное наблюдение.
+     * Гарантирует, что это произойдет только один раз.
+     */
+    function safeInitializeAndObserve() {
+        if (observerInitialized) return; // Защита от повторного запуска
+        observerInitialized = true;
 
-	// Walk a subtree (regular DOM or an open shadow root)
-	function replaceInSubtree(root, enable) {
-		const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
-		let node;
-		while ((node = walker.nextNode())) {
-			replaceInTextNode(node, enable);
-		}
-	}
+        console.log('Emoji Swap: Safe to initialize. Running first swap and starting observer.');
+        runSwap(true); // Первый запуск
+        observer.observe(document.body, { subtree: true, childList: true, characterData: true });
+    }
 
-	// Apply across the document and open shadow roots
-	function runSwap(enable) {
-		replaceInSubtree(document.body, enable);
-		document.querySelectorAll('*').forEach(el => {
-			if (el.shadowRoot) replaceInSubtree(el.shadowRoot, enable);
-		});
-	}
 
-	// Observe DOM changes and keep applying the current mode
-	const observer = new MutationObserver(muts => {
-		for (const m of muts) {
-			if (m.type === 'characterData') {
-				replaceInTextNode(m.target, currentEnabled);
-			} else if (m.type === 'childList') {
-				m.addedNodes.forEach(node => {
-					if (node.nodeType === Node.TEXT_NODE) {
-						replaceInTextNode(node, currentEnabled);
-					} else if (node.nodeType === Node.ELEMENT_NODE) {
-						replaceInSubtree(node, currentEnabled);
-						if (node.shadowRoot) replaceInSubtree(node.shadowRoot, currentEnabled);
-					}
-				});
-			}
-		}
-	});
+    // --- НОВАЯ ЛОГИКА ИНИЦИАЛИЗАЦИИ ---
+    function startOrStop(enabled) {
+        currentEnabled = !!enabled;
 
-	// Start (enable = hearts) or stop (disable = circles + stop observing)
-	function startOrStop(enabled) {
-		currentEnabled = !!enabled;
+        if (currentEnabled) {
+            // Маляр ждет...
+            console.log('Emoji Swap: Enabled. Waiting for safe signal from tasks_fix.js...');
 
-		if (currentEnabled) {
-			// Turn circles → hearts and keep it up-to-date
-			runSwap(true);
-			observer.observe(document.body, { subtree: true, childList: true, characterData: true });
-		} else {
-			// Immediately revert hearts → circles, then stop watching
-			observer.disconnect();
-			runSwap(false);
-		}
-	}
+            // 1. Устанавливаем таймер-фолбэк. Если за 2 секунды сигнал не придет,
+            // считаем, что мы не на странице задач, и можно работать.
+            const fallbackTimeout = setTimeout(() => {
+                console.log('Emoji Swap: Fallback timer fired. Initializing.');
+                window.removeEventListener('culms-tasks-fix-complete', onTasksFixComplete);
+                safeInitializeAndObserve();
+            }, 2000);
 
-	// React to storage changes (flip live without refresh)
-	browser.storage.onChanged.addListener(changes => {
-		if (changes.emojiHeartsEnabled) {
-			startOrStop(!!changes.emojiHeartsEnabled.newValue);
-		}
-	});
+            // 2. Определяем, что делать, когда придет сигнал
+            const onTasksFixComplete = () => {
+                console.log('Emoji Swap: Received "culms-tasks-fix-complete" signal. Initializing.');
+                clearTimeout(fallbackTimeout); // Отменяем фолбэк
+                window.removeEventListener('culms-tasks-fix-complete', onTasksFixComplete); // Убираем слушатель
+                safeInitializeAndObserve();
+            };
 
-	// Initialize on load based on current setting
-	browser.storage.sync.get('emojiHeartsEnabled').then(data => {
-		startOrStop(!!data.emojiHeartsEnabled);
-	}).catch(() => {
-		// if storage read fails, default to disabled (circles)
-		startOrStop(false);
-	});
+            // 3. Начинаем слушать сигнал
+            window.addEventListener('culms-tasks-fix-complete', onTasksFixComplete, { once: true });
+
+        } else {
+            // Если выключено, просто отключаем все
+            observer.disconnect();
+            runSwap(false);
+        }
+    }
+
+    // Загрузка настроек и запуск (без изменений)
+    browser.storage.onChanged.addListener(changes => {
+        if (changes.emojiHeartsEnabled) {
+            // Перезагрузка страницы, чтобы применить новую логику ожидания
+            window.location.reload();
+        }
+    });
+
+    browser.storage.sync.get('emojiHeartsEnabled').then(data => {
+        startOrStop(!!data.emojiHeartsEnabled);
+    }).catch(() => {
+        startOrStop(false);
+    });
 }

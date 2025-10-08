@@ -22,7 +22,7 @@ if (typeof window.darkThemeInitialized === 'undefined') {
             return;
         }
 
-        // Ensure base dark stylesheet is present
+        // Убеждаемся, что базовая темная таблица стилей присутствует
         if (!base) {
             const respBase = await fetch(browser.runtime.getURL('style.css'));
             const cssBase = await respBase.text();
@@ -32,7 +32,7 @@ if (typeof window.darkThemeInitialized === 'undefined') {
             document.head.appendChild(styleBase);
         }
 
-        // Apply or remove OLED overrides on top of base
+        // Применяем или удаляем OLED-переопределения поверх базовых
         const { oledEnabled } = await browser.storage.sync.get('oledEnabled');
         if (oledEnabled) {
             if (!document.getElementById(STYLE_ID_OLED)) {
@@ -50,15 +50,12 @@ if (typeof window.darkThemeInitialized === 'undefined') {
 
     /**
      * Обновляет иконку и подсказку на кнопке.
-     * Переписано с использованием async/await.
      */
     async function updateButtonState() {
         if (!themeToggleButton) return;
-        // ИЗМЕНЕНО: chrome.storage -> browser.storage с await
         const data = await browser.storage.sync.get('themeEnabled');
         const isEnabled = !!data.themeEnabled;
         const iconUrl = isEnabled ? 'icons/sun.svg' : 'icons/moon.svg';
-        // ИЗМЕНЕНО: chrome.runtime -> browser.runtime
         themeToggleButton.style.setProperty('--t-icon-start', `url(${browser.runtime.getURL(iconUrl)})`);
         themeToggleButton.title = isEnabled ? 'Переключить на светлую тему' : 'Переключить на темную тему';
     }
@@ -82,7 +79,6 @@ if (typeof window.darkThemeInitialized === 'undefined') {
         button.setAttribute('data-size', 'm');
         button.classList.add('button-action');
 
-        // ИЗМЕНЕНО: обработчик клика переписан с async/await
         button.addEventListener('click', async () => {
             const data = await browser.storage.sync.get('themeEnabled');
             await browser.storage.sync.set({ themeEnabled: !data.themeEnabled });
@@ -90,7 +86,7 @@ if (typeof window.darkThemeInitialized === 'undefined') {
 
         listItem.appendChild(button);
         themeToggleButton = button;
-        updateButtonState(); // Вызываем асинхронную функцию
+        updateButtonState();
         return listItem;
     }
 
@@ -125,22 +121,20 @@ if (typeof window.darkThemeInitialized === 'undefined') {
     // --- ОСНОВНАЯ ЛОГИКА ---
 
     // 1. Слушаем изменения в хранилище.
-    // ИЗМЕНЕНО: chrome.storage -> browser.storage
     browser.storage.onChanged.addListener(async (changes, namespace) => {
         const themeChanged = 'themeEnabled' in changes;
         const oledChanged = 'oledEnabled' in changes;
         if (themeChanged || oledChanged) {
             const data = await browser.storage.sync.get(['themeEnabled', 'oledEnabled']);
-            // Apply base and OLED override accordingly
+            // Применяем базовую и OLED-тему соответственно
             await applyTheme(!!data.themeEnabled);
             updateButtonState();
-            // Sync ShadowDOM as well
+            // Также синхронизируем ShadowDOM
             toggleShadowDomTheme(!!data.themeEnabled, !!data.oledEnabled);
         }
     });
 
     // 2. Применяем тему при первой загрузке скрипта.
-    // ИЗМЕНЕНО: chrome.storage -> browser.storage с .then()
     browser.storage.sync.get(['themeEnabled', 'oledEnabled']).then((data) => {
         if (data.themeEnabled) {
             applyTheme(true);
@@ -235,7 +229,7 @@ if (typeof window.darkThemeInitialized === 'undefined') {
                 } else if (!isEnabled && existingStyle) {
                     existingStyle.remove();
                 } else if (isEnabled && existingStyle) {
-                    // Switch between dark and oled
+                    // Переключаемся между темной и oled-темой
                     existingStyle.textContent = isOled ? shadowDomCssTextOled : shadowDomCssTextDark;
                 }
             }
@@ -252,27 +246,4 @@ if (typeof window.darkThemeInitialized === 'undefined') {
 
     // Запускаем наблюдателя.
     shadowDomObserver.observe(document.body, { childList: true, subtree: true });
-
-    // Синхронизируем состояние Shadow DOM с основной темой при изменении в хранилище.
-    browser.storage.onChanged.addListener((changes, namespace) => {
-        if (changes.themeEnabled || changes.oledEnabled) {
-            // themeEnabled controls on/off, oledEnabled controls variant
-            const themeOn = changes.themeEnabled ? !!changes.themeEnabled.newValue : undefined;
-            if (typeof themeOn === 'boolean') {
-                toggleShadowDomTheme(themeOn, !!(changes.oledEnabled ? changes.oledEnabled.newValue : false));
-            } else {
-                // Only variant changed
-                browser.storage.sync.get(['themeEnabled', 'oledEnabled']).then((data) => {
-                    toggleShadowDomTheme(!!data.themeEnabled, !!data.oledEnabled);
-                });
-            }
-        }
-    });
-
-    // И первоначальная проверка при загрузке.
-    browser.storage.sync.get(['themeEnabled', 'oledEnabled']).then((data) => {
-        if (data.themeEnabled) {
-            toggleShadowDomTheme(true, !!data.oledEnabled);
-        }
-    });
 }
