@@ -13,7 +13,7 @@
     let currentLongreadsId = null;
     let tasksCache = {};
 
-    const COURSE_SCAN_DELAY_MS = 1000; // Задержка между запросами (в мс)
+    const COURSE_SCAN_DELAY_MS = 200; // Задержка между запросами (в мс)
 
     // Mock-функция лога, чтобы избежать ошибок, если она не определена
     if (!window.cuLmsLog) {
@@ -350,7 +350,7 @@
         if (isExporterEnabled) {
             window.cuLmsLog('Course Exporter is ENABLED in localStorage. Starting scan...');
             // Запускаем экспорт с таймаутом, чтобы дать странице полностью загрузиться
-            setTimeout(() => exportCourseData(processAllCourses), 1000);
+            setTimeout(() => exportCourseData(processAllCourses), 200);
         } else {
             window.cuLmsLog('Course Exporter is DISABLED in localStorage. Skipping scan.');
         }

@@ -91,7 +91,7 @@ function insertWeightElement(infoList, weight) {
 /**
  * Ожидает появления элемента в DOM.
  */
-function waitForElement(selector, timeout = 10000) {
+function waitForElement(selector, timeout = 1000) {
     return new Promise((resolve, reject) => {
         const element = document.querySelector(selector);
         if (element) return resolve(element);

@@ -211,7 +211,7 @@ function extractTaskAndCourseNamesFromElement(element) {
     const courseName = taskRow.querySelector('.task-table__course-name')?.textContent.trim();
     return { taskName, courseName };
 }
-function waitForElement(selector, timeout = 10000) {
+function waitForElement(selector, timeout = 1000) {
     return new Promise((resolve, reject) => {
         const el = document.querySelector(selector);
         if (el) return resolve(el);
