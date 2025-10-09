@@ -32,7 +32,8 @@
                 "style_oled.css",
                 "dark_theme.js",
                 "icons/sun.svg",
-                "icons/moon.svg"
+                "icons/moon.svg",
+                "icons/course_system.svg"
             ],
             "matches": [
                 "https://my.centraluniversity.ru/*"

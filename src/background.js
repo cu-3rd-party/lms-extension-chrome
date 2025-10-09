@@ -17,6 +17,12 @@ browser.webNavigation.onCompleted.addListener(details => {
 function handleNavigation(tabId, url) {
     if (!url || !url.startsWith("https://my.centraluniversity.ru/")) return;
 
+    // СИСТЕМА ОТКРЫТЫХ КУРСОВ
+    browser.scripting.executeScript({
+        target: { tabId: tabId },
+        files: ["browser-polyfill.js", "open_courses_tab.js"]
+    }).catch(err => console.error(`[BG_LOG] Error injecting open_courses_tab.js:`, err));
+
     // --- ЛОГИКА РАЗДЕЛЬНОГО ВНЕДРЕНИЯ ---
     if (url.includes("/learn/tasks")) {
         // СТРАНИЦА ЗАДАЧ: Внедряем объединенный tasks_fix, но НЕ emoji_swap
