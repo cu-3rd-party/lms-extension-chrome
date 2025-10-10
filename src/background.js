@@ -1,4 +1,4 @@
-// background.js (Эта версия ПРАВИЛЬНАЯ, ее менять не нужно)
+// background.js
 
 try {
     importScripts('browser-polyfill.js');
@@ -6,6 +6,7 @@ try {
     console.log("Running in a non-MV3 environment or Firefox.");
 }
 
+// Слушатели событий навигации
 browser.webNavigation.onHistoryStateUpdated.addListener(details => {
     if (details.frameId === 0) handleNavigation(details.tabId, details.url);
 });
@@ -14,10 +15,16 @@ browser.webNavigation.onCompleted.addListener(details => {
     if (details.frameId === 0) handleNavigation(details.tabId, details.url);
 });
 
+/**
+ * Обрабатывает навигацию и внедряет нужные скрипты.
+ * @param {number} tabId - ID вкладки.
+ * @param {string} url - URL страницы.
+ */
 function handleNavigation(tabId, url) {
     if (!url || !url.startsWith("https://my.centraluniversity.ru/")) return;
 
-    // СИСТЕМА ОТКРЫТЫХ КУРСОВ
+    // --- ОБЩИЕ СКРИПТЫ ---
+    // СИСТЕМА ОТКРЫТЫХ КУРСОВ (внедряется всегда)
     browser.scripting.executeScript({
         target: { tabId: tabId },
         files: ["browser-polyfill.js", "open_courses_tab.js"]
@@ -38,13 +45,27 @@ function handleNavigation(tabId, url) {
         }).catch(err => console.error(`[BG_LOG] Error injecting default scripts:`, err));
     }
 
-    // Внедрение других скриптов для других страниц
+    // --- ВНЕДРЕНИЕ СКРИПТОВ ДЛЯ КОНКРЕТНЫХ СТРАНИЦ ---
+
+    // СТРАНИЦА АКТУАЛЬНЫХ КУРСОВ: Запускаем наш новый плагин-экспортер
+    // ВАЖНО: Этот блок добавлен для загрузки вашего нового скрипта
+    if (url.includes("/learn/courses/view/actual")) {
+        browser.scripting.executeScript({
+            target: { tabId: tabId },
+            // Убедитесь, что скрипт из предыдущего ответа сохранен как 'course_exporter_plugin.js'
+            files: ["browser-polyfill.js", "course_exporter.js"]
+        }).catch(err => console.error(`[BG_LOG] Error injecting course_exporter_plugin.js:`, err));
+    }
+
+    // ЛЮБАЯ СТРАНИЦА ПРОСМОТРА КУРСОВ
     if (url.includes("/learn/courses/view")) {
         browser.scripting.executeScript({
             target: { tabId: tabId },
             files: ["browser-polyfill.js", "courses_fix.js"]
         }).catch(err => console.error(`[BG_LOG] Error injecting courses_fix.js:`, err));
     }
+
+    // СТРАНИЦА ЛОНГРИДОВ
     if (url.includes("/longreads/")) {
         browser.scripting.executeScript({
             target: { tabId: tabId },

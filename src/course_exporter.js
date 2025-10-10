@@ -1,24 +1,38 @@
-// currently disabled; 
-// course-exporter.js
+// ==UserScript==
+// @name         Central University Course Exporter (Local Server Plugin)
+// @namespace    http://tampermonkey.net/
+// @version      2.1
+// @description  Scans the first available course and uploads material info to a local server.
+// @author       You
+// @match        https://my.centraluniversity.ru/learn/courses/view/actual
+// @grant        none
+// ==/UserScript==
 
-// Весь код обернут в Немедленно Вызываемую Функциональную Экспрессию (IIFE)
-// для создания локальной области видимости и предотвращения конфликтов переменных
 (() => {
+    // --- ИСПРАВЛЕНИЕ: Предотвращение двойного запуска скрипта ---
+    // Background-скрипт может внедрять этот код несколько раз (onCompleted и onHistoryStateUpdated).
+    // Этот флаг гарантирует, что основная логика выполнится только один раз на одной странице.
+    if (window.courseExporterHasRun) {
+        console.log('Course Exporter Plugin: Detected duplicate execution. Aborting.');
+        return;
+    }
+    window.courseExporterHasRun = true;
+    // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
+
+
     // ====================================================================
     // Глобальные переменные и вспомогательные функции
     // ====================================================================
 
-    // Кэш для хранения данных материалов и задач, теперь в локальной области видимости
+    // Кэш для хранения данных материалов и задач
     let materialsCache = null;
     let currentLongreadsId = null;
     let tasksCache = {};
 
-    const COURSE_SCAN_DELAY_MS = 1000; // Задержка между запросами (в мс)
+    const API_DELAY_MS = 1000; // Задержка между запросами к API my.centraluniversity.ru
 
-    // Mock-функция лога, чтобы избежать ошибок, если она не определена
-    if (!window.cuLmsLog) {
-        window.cuLmsLog = console.log;
-    }
+    // Используем console.log для логирования
+    const cuLmsLog = console.log;
 
     /**
      * Создает задержку выполнения кода.
@@ -28,132 +42,79 @@
     }
 
     // ====================================================================
-    // ФУНКЦИИ ДЛЯ API-ЗАПРОСОВ (из вашего оригинального кода)
+    // ФУНКЦИИ ДЛЯ API-ЗАПРОСОВ К СЕРВЕРУ УНИВЕРСИТЕТА
+    // (в основном без изменений, взяты из вашего кода)
     // ====================================================================
 
     async function fetchMaterials(longreadsId) {
         if (materialsCache && currentLongreadsId === longreadsId) {
-            window.cuLmsLog('Returning materials from cache for longreads ID:', longreadsId);
+            cuLmsLog(`[CU] Returning materials from cache for longread ID: ${longreadsId}`);
             return materialsCache;
         }
-
-        window.cuLmsLog(`Fetching materials for longreads ID: ${longreadsId}`);
+        cuLmsLog(`[CU] Fetching materials for longread ID: ${longreadsId}`);
         const apiUrl = `https://my.centraluniversity.ru/api/micro-lms/longreads/${longreadsId}/materials?limit=10000`;
-
         try {
             const response = await fetch(apiUrl, {
                 method: "GET",
-                headers: {
-                    "accept": "application/json, text/plain, */*"
-                },
+                headers: { "accept": "application/json, text/plain, */*" },
                 mode: "cors",
                 credentials: "include"
             });
-
-            if (!response.ok) {
-                if (response.status === 401) {
-                    window.cuLmsLog('Unauthorized: Please ensure you are logged in. Authorization likely failed due to missing or invalid cookies.');
-                }
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
-            window.cuLmsLog('Successfully fetched materials:', data);
             materialsCache = data;
             currentLongreadsId = longreadsId;
             return data;
-
         } catch (error) {
-            window.cuLmsLog('Error fetching longreads materials:', error);
+            cuLmsLog(`[CU] Error fetching longreads materials for ${longreadsId}:`, error);
             return null;
         }
     }
 
     async function fetchTaskDetails(taskId) {
-        if (!taskId) {
-            window.cuLmsLog('fetchTaskDetails received null or undefined taskId.');
-            return null;
-        }
         if (tasksCache[taskId]) {
-            // Закомментируем, чтобы избежать ненужного логирования при активном сканировании
-            // window.cuLmsLog('Returning task details from cache for task ID:', taskId); 
             return tasksCache[taskId];
         }
-
-        window.cuLmsLog(`Fetching task details for task ID: ${taskId}`);
+        cuLmsLog(`[CU] Fetching task details for task ID: ${taskId}`);
         const apiUrl = `https://my.centraluniversity.ru/api/micro-lms/tasks/${taskId}`;
-
         try {
             const response = await fetch(apiUrl, {
                 method: "GET",
-                headers: {
-                    "accept": "application/json, text/plain, */*"
-                },
+                headers: { "accept": "application/json, text/plain, */*" },
                 mode: "cors",
                 credentials: "include"
             });
-
-            if (!response.ok) {
-                if (response.status === 401) {
-                    window.cuLmsLog('Unauthorized: Please ensure you are logged in. Authorization likely failed due to missing or invalid cookies.');
-                }
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
-            window.cuLmsLog('Successfully fetched task details:', data);
             tasksCache[taskId] = data;
             return data;
         } catch (error) {
-            window.cuLmsLog('Error fetching task details:', error);
+            cuLmsLog(`[CU] Error fetching task details for ${taskId}:`, error);
             return null;
         }
     }
 
-    /**
-     * Получает финальную ссылку на скачивание файла.
-     * Мы не используем оригинальную getDownloadUrl, так как она полагается на DOM,
-     * а здесь мы работаем с чистыми данными API.
-     * Эта функция переопределена, чтобы работать напрямую с filename и version.
-     */
     async function getDownloadLinkApi(filename, version) {
-        const encodedFilenameForDownloadLink = encodeURIComponent(filename)
-            .replace(/\//g, '%2F');
-
-        const downloadLinkApiUrl = `https://my.centraluniversity.ru/api/micro-lms/content/download-link?filename=${encodedFilenameForDownloadLink}&version=${version}`;
-
+        const encodedFilename = encodeURIComponent(filename).replace(/\//g, '%2F');
+        const apiUrl = `https://my.centraluniversity.ru/api/micro-lms/content/download-link?filename=${encodedFilename}&version=${version}`;
         try {
-            const response = await fetch(downloadLinkApiUrl, {
+            const response = await fetch(apiUrl, {
                 method: "GET",
                 headers: { "accept": "application/json" },
                 mode: "cors",
                 credentials: "include"
             });
-
-            if (!response.ok) {
-                if (response.status === 401) {
-                    window.cuLmsLog('Unauthorized: Please ensure you are logged in.');
-                }
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
             return data ? data.url : null;
-
         } catch (error) {
-            window.cuLmsLog(`Error fetching download link for ${filename}:`, error);
+            cuLmsLog(`[CU] Error fetching download link for ${filename}:`, error);
             return null;
         }
     }
 
-    // ====================================================================
-    // ОСНОВНАЯ ЛОГИКА ЭКСПОРТА
-    // ====================================================================
-
-    /**
-     * 1. Получает список всех курсов студента.
-     */
     async function fetchStudentCourses() {
+        cuLmsLog('[CU] Fetching student courses...');
         const apiUrl = 'https://my.centraluniversity.ru/api/micro-lms/courses/student?limit=10000';
         try {
             const response = await fetch(apiUrl, {
@@ -162,29 +123,18 @@
                 mode: "cors",
                 credentials: "include"
             });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
-            window.cuLmsLog(`Successfully fetched ${data.items.length} student courses.`);
-            return data.items.map(course => ({
-                id: course.id,
-                name: course.name,
-                isArchived: course.isArchived,
-                themes: []
-            }));
+            cuLmsLog(`[CU] Found ${data.items.length} courses.`);
+            return data.items;
         } catch (error) {
-            window.cuLmsLog('Error fetching student courses:', error);
+            cuLmsLog('[CU] Error fetching student courses:', error);
             return [];
         }
     }
 
-    /**
-     * 2. Получает обзор курса (темы и longreads).
-     */
     async function fetchCourseOverview(courseId) {
+        cuLmsLog(`[CU] Fetching overview for course ID: ${courseId}`);
         const apiUrl = `https://my.centraluniversity.ru/api/micro-lms/courses/${courseId}/overview`;
         try {
             const response = await fetch(apiUrl, {
@@ -193,170 +143,185 @@
                 mode: "cors",
                 credentials: "include"
             });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            return data.themes.map(theme => ({
-                id: theme.id,
-                name: theme.name,
-                longreads: theme.longreads.map(longread => ({
-                    id: longread.id,
-                    name: longread.name,
-                    downloadUrls: []
-                }))
-            }));
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.json();
         } catch (error) {
-            window.cuLmsLog(`Error fetching overview for course ${courseId}:`, error);
-            return [];
+            cuLmsLog(`[CU] Error fetching overview for course ${courseId}:`, error);
+            return null;
         }
     }
 
-    /**
-     * 3 & 4. Сканирует лонгрид, получает материалы и генерирует ссылки на скачивание.
-     */
-    async function scanLongreadMaterials(longreadId) {
-        const downloadUrls = [];
+    async function scanLongreadForDownloadLink(longreadId) {
         const materialsData = await fetchMaterials(longreadId);
-
-        if (!materialsData || !materialsData.items) {
-            window.cuLmsLog(`No materials data for longread ${longreadId}.`);
-            return downloadUrls;
-        }
-
-        window.cuLmsLog(`--> Processing ${materialsData.items.length} materials...`);
+        if (!materialsData || !materialsData.items) return null;
 
         for (const item of materialsData.items) {
-            const filesToProcess = [];
-
-            // Case 1 & 2: Файлы в item.attachments или item.content (для типа 'file')
+            let fileToProcess = null;
             if (item.attachments && item.attachments.length > 0) {
-                filesToProcess.push(...item.attachments);
-            }
-            if (item.discriminator === "file" && item.content) {
-                filesToProcess.push(item.content);
-            } else if (item.discriminator === "file" && item.filename && item.version) {
-                filesToProcess.push({ name: item.filename, filename: item.filename, version: item.version });
+                fileToProcess = item.attachments[0]; // Берем первый файл
+            } else if (item.discriminator === "file" && item.content) {
+                fileToProcess = item.content;
             }
 
-            // Case 3: Файлы в student's solution (через Task API)
-            if (item.taskId || (item.task && item.task.id)) {
-                const taskId = item.taskId || item.task.id;
-
-                // Делаем таймаут перед запросом деталей таска
-                await delay(COURSE_SCAN_DELAY_MS);
-
-                const taskDetails = await fetchTaskDetails(taskId);
-
-                if (taskDetails && taskDetails.solution && taskDetails.solution.attachments && taskDetails.solution.attachments.length > 0) {
-                    filesToProcess.push(...taskDetails.solution.attachments);
-                }
+            if (fileToProcess && fileToProcess.filename && fileToProcess.version) {
+                cuLmsLog(`[CU] Found file "${fileToProcess.name}". Getting download link...`);
+                const url = await getDownloadLinkApi(fileToProcess.filename, fileToProcess.version);
+                if (url) return url; // Возвращаем первую найденную ссылку
             }
-
-            // Получаем ссылку для каждого найденного файла
-            for (const file of filesToProcess) {
-                if (!file.filename || !file.version || !file.name) continue;
-
-                window.cuLmsLog(`---> Getting download link for file: ${file.name}`);
-
-                const url = await getDownloadLinkApi(file.filename, file.version);
-                if (url) {
-                    downloadUrls.push({
-                        fileName: file.name,
-                        fullDownloadLink: url
-                    });
-                }
-            }
-
-            await delay(COURSE_SCAN_DELAY_MS); // Задержка после обработки каждого материала
         }
+        return null; // Если не нашли ссылок
+    }
 
-        return downloadUrls;
+    // ====================================================================
+    // ФУНКЦИИ ДЛЯ ВЗАИМОДЕЙСТВИЯ С ЛОКАЛЬНЫМ СЕРВЕРОМ
+    // ====================================================================
+
+    /**
+     * Отправляет структуру курса на локальный сервер и получает список недостающих лонгридов.
+     */
+    async function getMissingLongreadsFromServer(payload) {
+        cuLmsLog('[Local] Sending course structure to localhost:8000/api/fetch/');
+        try {
+            const response = await fetch('http://localhost:8000/api/fetch/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                throw new Error(`Local server returned status: ${response.status}`);
+            }
+            const data = await response.json();
+            cuLmsLog(`[Local] Server responded with ${data.missing_longreads.length} missing longreads.`);
+            return data.missing_longreads;
+        } catch (error) {
+            cuLmsLog('[Local] Error communicating with /api/fetch/. Is the server running?', error);
+            return null;
+        }
     }
 
     /**
-     * Основная функция для запуска экспорта курсов.
+     * Загружает данные одного лонгрида на локальный сервер.
      */
-    async function exportCourseData(processAll = false) {
-        if (window.location.pathname !== '/learn/courses/view/actual') {
-            window.cuLmsLog('Course export runs only on /learn/courses/view/actual page.');
-            return;
-        }
-
-        window.cuLmsLog('Starting course data export...');
-
-        // 1. Получаем список курсов
-        let studentCourses = await fetchStudentCourses();
-        if (studentCourses.length === 0) {
-            window.cuLmsLog('No courses found or failed to fetch initial course list.');
-            return;
-        }
-
-        const coursesToProcess = processAll ? studentCourses : studentCourses.slice(0, 2);
-        const results = [];
-
-        window.cuLmsLog(`Processing ${coursesToProcess.length} courses... (processAll: ${processAll})`);
-
-        // 2. Итерируемся по курсам
-        for (const course of coursesToProcess) {
-            window.cuLmsLog(`\n✅ Processing course: ${course.name} (ID: ${course.id})`);
-
-            // Запрос обзора курса
-            const themes = await fetchCourseOverview(course.id);
-            await delay(COURSE_SCAN_DELAY_MS * 3);
-
-            // 3 & 4. Итерируемся по темам и лонгридам
-            for (const theme of themes) {
-                for (const longread of theme.longreads) {
-                    window.cuLmsLog(`\n---> Processing longread: ${longread.name} (ID: ${longread.id})`);
-
-                    // Сканирование материалов и получение ссылок
-                    longread.downloadUrls = await scanLongreadMaterials(longread.id);
-                    await delay(COURSE_SCAN_DELAY_MS * 2); // Дополнительная задержка после лонгрида
-                }
-            }
-
-            results.push({
-                id: course.id,
-                name: course.name,
-                isArchived: course.isArchived,
-                themes: themes
+    async function uploadLongreadData(payload) {
+        cuLmsLog(`[Local] Uploading data for longread ID ${payload.longread_id} to localhost:8000/api/upload/`);
+        try {
+            const response = await fetch('http://localhost:8000/api/upload/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
-
-            window.cuLmsLog(`\nFinished processing course: ${course.name}`);
-            await delay(COURSE_SCAN_DELAY_MS * 5); // Большая задержка между курсами
+            if (!response.ok) {
+                throw new Error(`Local server returned status: ${response.status}`);
+            }
+            cuLmsLog(`[Local] Successfully uploaded longread ${payload.longread_id}.`);
+            return true;
+        } catch (error) {
+            cuLmsLog(`[Local] Error uploading data for longread ${payload.longread_id}:`, error);
+            return false;
         }
-
-        // 5. Вывод результатов в консоль
-        window.cuLmsLog('====================================================');
-        window.cuLmsLog('🚀 ALL COURSE DATA EXPORTED SUCCESSFULLY:');
-        window.cuLmsLog(JSON.stringify(results, null, 2));
-        window.cuLmsLog('====================================================');
     }
 
+
+    // ====================================================================
+    // ОСНОВНАЯ ЛОГИКА
+    // ====================================================================
+
+    async function processFirstCourse() {
+        cuLmsLog('--- Starting background course processing ---');
+
+        // 1. Узнаем доступные курсы
+        const courses = await fetchStudentCourses();
+        if (!courses || courses.length === 0) {
+            cuLmsLog('No student courses found. Stopping.');
+            return;
+        }
+        const firstCourse = courses[0]; // Берем только первый курс
+        cuLmsLog(`Target course: "${firstCourse.name}" (ID: ${firstCourse.id})`);
+
+        // 2. Получаем его темы и лонгриды
+        const overview = await fetchCourseOverview(firstCourse.id);
+        if (!overview || !overview.themes) {
+            cuLmsLog('Could not fetch course overview. Stopping.');
+            return;
+        }
+
+        // 3. Формируем структуру для отправки на локальный сервер
+        // и создаем карту для быстрого доступа к данным по ID лонгрида
+        const longreadInfoMap = new Map();
+        const payloadForFetch = {
+            courses: [{
+                course_id: firstCourse.id,
+                themes: overview.themes.map(theme => {
+                    theme.longreads.forEach(longread => {
+                        longreadInfoMap.set(longread.id, {
+                            course_title: firstCourse.name,
+                            theme_id: theme.id,
+                            theme_title: theme.name,
+                            longread_title: longread.name,
+                        });
+                    });
+                    return {
+                        theme_id: theme.id,
+                        longreads: theme.longreads.map(lr => lr.id),
+                    };
+                }),
+            }, ],
+        };
+
+        // 4. Отправляем на сервер и получаем список недостающих ID
+        const missingIds = await getMissingLongreadsFromServer(payloadForFetch);
+        if (!missingIds || missingIds.length === 0) {
+            cuLmsLog('Local server has all materials for this course, or an error occurred. Stopping.');
+            return;
+        }
+
+        // 5. Обрабатываем каждый недостающий лонгрид
+        cuLmsLog(`--- Processing ${missingIds.length} missing longreads ---`);
+        for (const longreadId of missingIds) {
+            const info = longreadInfoMap.get(longreadId);
+            if (!info) {
+                cuLmsLog(`Warning: Could not find metadata for missing longread ID ${longreadId}. Skipping.`);
+                continue;
+            }
+
+            // 6. Ищем ссылку на скачивание
+            const downloadLink = await scanLongreadForDownloadLink(longreadId);
+
+            if (downloadLink) {
+                // 7. Если ссылка найдена, формируем данные и отправляем на локальный сервер
+                const uploadPayload = {
+                    course_id: firstCourse.id,
+                    theme_id: info.theme_id,
+                    longread_id: longreadId,
+                    download_link: downloadLink,
+                    course_title: info.course_title,
+                    theme_title: info.theme_title,
+                    longread_title: info.longread_title,
+                };
+                await uploadLongreadData(uploadPayload);
+            } else {
+                cuLmsLog(`Warning: No download link found for longread "${info.longread_title}" (ID: ${longreadId}). Skipping.`);
+            }
+
+            // Задержка между обработкой каждого лонгрида, чтобы не нагружать сервер
+            await delay(API_DELAY_MS);
+        }
+
+        cuLmsLog('--- Background processing finished ---');
+    }
 
     // ====================================================================
     // ЗАПУСК СКРИПТА
     // ====================================================================
-
-    function initializeCourseExporter() {
-        const isExporterEnabled = localStorage.getItem('cuLmsExporterEnabled') === 'true';
-
-        // ИЗМЕНИТЕ ЗДЕСЬ, ЧТОБЫ СКАНДРОВАТЬ ВСЕ КУРСЫ:
-        const processAllCourses = false;
-
-        if (isExporterEnabled) {
-            window.cuLmsLog('Course Exporter is ENABLED in localStorage. Starting scan...');
-            // Запускаем экспорт с таймаутом, чтобы дать странице полностью загрузиться
-            setTimeout(() => exportCourseData(processAllCourses), 1000);
-        } else {
-            window.cuLmsLog('Course Exporter is DISABLED in localStorage. Skipping scan.');
+    function initialize() {
+        // Проверяем, что мы на нужной странице
+        if (window.location.href === 'https://my.centraluniversity.ru/learn/courses/view/actual') {
+            cuLmsLog('Course Exporter Plugin: Detected correct page. Starting process in 3 seconds...');
+            // Запускаем с задержкой, чтобы дать странице полностью загрузиться
+            setTimeout(processFirstCourse, 3000);
         }
     }
 
-    // Запускаем инициализацию при загрузке DOM
-    initializeCourseExporter();
+    initialize();
 
 })();
