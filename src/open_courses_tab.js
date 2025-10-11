@@ -2,7 +2,7 @@
 
 if (!window.customSidebarObserverInitialized) {
     window.customSidebarObserverInitialized = true;
-    console.log('[CU Enhancer] Initializing sidebar script v38 (Stable URL - No Rewrite)...');
+    console.log('[CU Enhancer] Initializing sidebar script v39 (Titles Enabled)...');
 
     // --- КОНФИГУРАЦИЯ И КОНСТАНТЫ ---
     const TAB_ID = 'my-custom-courses-tab';
@@ -48,7 +48,9 @@ if (!window.customSidebarObserverInitialized) {
         const customCourseId = targetElement.dataset.customCourseId;
         const templateCourseId = targetElement.dataset.templateCourseId;
         if (!templateCourseId) return;
-        sessionStorage.setItem(SESSION_STORAGE_KEY_COURSE_TARGET, JSON.stringify({ id: customCourseId }));
+        // Передаем не только ID, но и заголовок для быстрого отображения
+        const title = targetElement.querySelector('h2.course-card__title')?.textContent;
+        sessionStorage.setItem(SESSION_STORAGE_KEY_COURSE_TARGET, JSON.stringify({ id: customCourseId, title: title }));
         window.location.href = `https://my.centraluniversity.ru/learn/courses/view/actual/${templateCourseId}`;
     };
 
@@ -83,13 +85,9 @@ if (!window.customSidebarObserverInitialized) {
             
             const data = await response.json();
             
-            // 1. Конвертируем Base64 в Blob
             const pdfBlob = base64ToBlob(data.contents, 'application/pdf');
-            
-            // 2. Создаем короткую и быструю Object URL
             const blobUrl = URL.createObjectURL(pdfBlob);
             
-            // 3. Открываем эту быструю ссылку в новой вкладке
             window.open(blobUrl, '_blank');
 
         } catch (error) {
@@ -110,10 +108,20 @@ if (!window.customSidebarObserverInitialized) {
 
         try {
             console.log(`[CU Enhancer] Modifying course page for course ID: ${courseData.id}`);
+            
+            // Сразу устанавливаем заголовок, который сохранили при клике
+            const pageTitle = await waitForElement('h1.page-title');
+            if (pageTitle && courseData.title) pageTitle.textContent = courseData.title;
 
             const response = await fetch(`${API_HOST}/api/course/${courseData.id}/`);
             if (!response.ok) throw new Error('Failed to fetch themes');
             const longreadsData = await response.json();
+            
+            // Обновляем заголовок страницы на более точный из API
+            if (pageTitle && longreadsData.length > 0) {
+                 pageTitle.textContent = longreadsData[0].course_title || `Course ${courseData.id}`;
+            }
+
             const themesMap = longreadsData.reduce((acc, longread) => {
                 (acc[longread.theme_id] = acc[longread.theme_id] || []).push(longread);
                 return acc;
@@ -140,12 +148,18 @@ if (!window.customSidebarObserverInitialized) {
             const customThemeIds = Object.keys(themesMap);
             for (const themeId of customThemeIds) {
                 const longreadsInTheme = themesMap[themeId];
+                if (longreadsInTheme.length === 0) continue;
+
                 const newTheme = templateTheme.cloneNode(true);
                 newTheme.dataset.customTheme = 'true';
                 newTheme.style.display = '';
 
                 const titleEl = newTheme.querySelector('h2.themes-accordion-item__item-title');
-                if (titleEl) titleEl.textContent = `Theme ${themeId}`;
+                // --- ИЗМЕНЕНИЕ 1: Отображаем заголовок темы ---
+                if (titleEl) {
+                    const themeTitle = longreadsInTheme[0].theme_title;
+                    titleEl.textContent = themeTitle || `Theme ${themeId}`;
+                }
 
                 const contentList = newTheme.querySelector('ul.longreads-list');
                 if (contentList) {
@@ -155,7 +169,8 @@ if (!window.customSidebarObserverInitialized) {
                         const materialLink = newMaterial.querySelector('a');
                         const materialTitle = newMaterial.querySelector('h3.longread-title');
                         if (materialTitle && materialLink) {
-                            materialTitle.textContent = `Longread ${longread.longread_id}`;
+                            // --- ИЗМЕНЕНИЕ 2: Отображаем заголовок лонгрида ---
+                            materialTitle.textContent = longread.longread_title || `Longread ${longread.longread_id}`;
                             materialLink.href = `#`;
                             materialLink.addEventListener('click', (event) => {
                                 handleLongreadClick(event, courseData.id, themeId, longread.longread_id);
@@ -194,17 +209,17 @@ if (!window.customSidebarObserverInitialized) {
                 }
             });
 
-            const pageTitle = await waitForElement('h1.page-title');
-            if (pageTitle) pageTitle.textContent = `Course ${courseData.id}`;
-            console.log('[CU Enhancer] Course page modified. PDFs now open via performant Blob URLs.');
+            // --- ИЗМЕНЕНИЕ 3: Заголовок страницы курса (дублируется для надежности) ---
+            if (pageTitle && longreadsData.length > 0) {
+                pageTitle.textContent = longreadsData[0].course_title || `Course ${courseData.id}`;
+            }
+            console.log('[CU Enhancer] Course page modified. Titles are now displayed.');
 
         } catch (error) {
             console.error('[CU Enhancer] Error modifying course detail page:', error);
         }
     };
     
-    // ... (остальной код без изменений) ...
-
     const applyModifications = async () => {
         const courseList = await waitForElement('ul.course-list');
         if (!courseList || courseList.dataset.modified === 'true') return;
@@ -255,7 +270,10 @@ if (!window.customSidebarObserverInitialized) {
                 const newItem = originalReadmeItem.cloneNode(true);
                 newItem.dataset.dynamicCourse = 'true';
                 const titleElement = newItem.querySelector('h2.course-card__title');
-                if (titleElement) titleElement.textContent = `Course ${course.course_id}`;
+                // --- ИЗМЕНЕНИЕ 4: Отображаем заголовок курса в списке ---
+                if (titleElement) {
+                    titleElement.textContent = course.course_title || `Course ${course.course_id}`;
+                }
 
                 const linkElement = newItem.querySelector('a');
                 if (linkElement) {
@@ -279,6 +297,8 @@ if (!window.customSidebarObserverInitialized) {
 
         courseList.dataset.modified = 'true';
     };
+
+    // ... (остальной код без изменений, он не затрагивает отображение) ...
 
     const revertModifications = async () => {
         const courseList = document.querySelector('ul.course-list');
