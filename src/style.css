@@ -11712,3 +11712,16 @@ tui-chip.state-chip[data-culms-status="solved"] {
     background-color: var(--culms-status-solved) !important;
     color: white !important;
 }
+
+/* Исправление фона для карточек курсов без категории */
+.course-card.withoutCategory {
+    background-color: var(--culms-dark-bg-secondary) !important;
+}
+
+/* 
+ * Возвращаем белый цвет иконке на темном фоне.
+ * (Оригинальный стиль делал ее темной для светлого фона).
+*/
+.course-card.withoutCategory .course-icon {
+    color: #fff !important;
+}
