@@ -33,9 +33,7 @@
                 "style_oled.css",
                 "emoji_swap.js",
                 "style.css",
-                "dark_theme.js",
-                "icons/sun.svg",
-                "icons/moon.svg"
+                "dark_theme.js"
             ],
             "matches": [
                 "https://my.centraluniversity.ru/*"
