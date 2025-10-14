@@ -1,4 +1,3 @@
-// tasks_fix.js (ФИНАЛЬНАЯ ВЕРСИЯ: Сохранение параметров фильтров)
 'use strict';
 
 // --- КОНСТАНТЫ ДЛЯ LOCALSTORAGE ---
@@ -39,19 +38,36 @@ function stripEmojis(text) {
     return text.replace(EMOJI_REGEX, '').trim();
 }
 
+// --- НОВАЯ ЛОГИКА: Троттлинг для MutationObserver ---
+let canRunLogic = true;
+
+/**
+ * Обертка для запуска основной логики с ограничением по частоте (не чаще раза в секунду).
+ */
+function throttledCheckAndRun() {
+    if (!canRunLogic) return; // Если вызов был недавно, выходим
+
+    const taskTableExists = document.querySelector('.task-table');
+    const isHeaderMissing = !document.querySelector('[data-culms-weight-header]');
+
+    if (taskTableExists && isHeaderMissing) {
+        canRunLogic = false; // Блокируем повторный запуск
+        runLogic();
+        setTimeout(() => {
+            canRunLogic = true; // Разрешаем новый запуск через 1 секунду
+        }, 1000);
+    }
+}
+
 /**
  * Главный инициализатор, который запускает наблюдатель.
  */
 function initializeObserver() {
-    const observer = new MutationObserver(() => {
-        const taskTableExists = document.querySelector('.task-table');
-        const isHeaderMissing = !document.querySelector('[data-culms-weight-header]');
-        if (taskTableExists && isHeaderMissing) {
-            runLogic();
-        }
-    });
+    // Теперь наблюдатель вызывает функцию с ограничением по частоте
+    const observer = new MutationObserver(throttledCheckAndRun);
     observer.observe(document.body, { childList: true, subtree: true });
 }
+
 
 /**
  * Основная логика-координатор.
@@ -390,4 +406,9 @@ function createFilterOption(text, isSelected) {
 }
 
 // --- Запуск скрипта ---
+
+// 1. Пробуем запустить логику сразу
+throttledCheckAndRun();
+
+// 2. Настраиваем наблюдатель для отслеживания последующих изменений в DOM
 initializeObserver();
