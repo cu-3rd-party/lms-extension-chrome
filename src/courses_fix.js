@@ -61,6 +61,7 @@ async function processCourses() {
 /**
  * Находит все иконки-звёздочки, читает их оригинальный цвет из инлайн-стиля
  * и применяет его заново с '!important', чтобы победить стили сайта.
+ * check
  */
 function restoreSkillLevelIconColors() {
     const icons = document.querySelectorAll('.course-card .skill-level tui-icon');
