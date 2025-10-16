@@ -23,6 +23,7 @@
                 "browser-polyfill.js",
                 "icons/*.svg",
                 "icons/*.png",
+                "course_card_simplifier.js",
                 "tasks_fix.js",
                 "courses_fix.js",
                 "debug_utils.js",
