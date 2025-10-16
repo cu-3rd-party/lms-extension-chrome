@@ -225,7 +225,7 @@ function addOrUpdateButton(li, courseId, isLocallyArchived, isDarkTheme) {
     const iconUrl = isLocallyArchived
         ? browser.runtime.getURL('icons/unarchive.svg')
         : browser.runtime.getURL('icons/archive.svg');
-    const iconColor = isDarkTheme ? '#FFFFFF' : '#4b5563';
+    const iconColor = isDarkTheme ? '#FFFFFF' : '#181a1c';
     iconSpan.style.cssText = `
         display: inline-block;
         width: 24px;
