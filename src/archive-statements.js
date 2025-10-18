@@ -529,23 +529,28 @@ const ARCHIVE_KEY = "cu.lms.archived-statements";
 
         window.cuLmsLog("[LMS Extension] Starting initialization");
 
-        // Показываем loader
-        showLoader();
+        const tableExists = !!document.querySelector("table.cu-table tr[tuitr]");
+        if (!tableExists) {
+            showLoader();
+        }
 
-        // Загружаем данные из localStorage
         await loadArchivedCourses();
 
-        // Применяем функционал
-        applyArchivedState();
-        await addArchiveButtons();
-        addBreadcrumbNavigation();
+        if (currentView === 'main') {
+            applyArchivedState();
+            await addArchiveButtons();
+            addBreadcrumbNavigation();
+        }
 
-        // Скрываем loader
-        hideLoader();
+        if (!tableExists) {
+            hideLoader();
+        }
 
         isInitialized = true;
         window.cuLmsLog("[LMS Extension] Initialization complete");
     }
+
+
 
     function initObserver() {
         const mainContainer = document.querySelector("main") || document.body;
@@ -558,12 +563,13 @@ const ARCHIVE_KEY = "cu.lms.archived-statements";
                 const table = document.querySelector("tr[tuitr]");
                 if (table && !isInitialized) {
                     await initialize();
-                } else if (table && isInitialized) {
-                    // Если уже инициализировано, просто обновляем кнопки
+                } else if (table && isInitialized && currentView === 'main') {
+                    // Обновляем кнопки только если мы в основном режиме
                     applyArchivedState();
                     addArchiveButtons();
                     addBreadcrumbNavigation();
                 }
+
             }, 150);
         });
 
