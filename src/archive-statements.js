@@ -1,6 +1,12 @@
 const ARCHIVE_KEY = "cu.lms.archived-statements";
+const ALLOWED_PATH = "/learn/reports/student-performance";
 
 (async function () {
+    if (window.location.pathname.replace(/\/$/, '') !== ALLOWED_PATH) {
+        console.log("[LMS Extension] Skipped: not the main student performance page (path mismatch)");
+        return;
+    }
+
     if (!window.cuLmsLog) {
         window.cuLmsLog = console.log;
     }
