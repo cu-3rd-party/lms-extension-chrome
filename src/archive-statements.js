@@ -10,6 +10,8 @@ const ARCHIVE_KEY = "cu.lms.archived-statements";
     let archivedCourses = new Map();
     let currentView = 'main'; // 'main' или 'archive'
     let isInitialized = false;
+    let currentPath = window.location.pathname;
+    let currentTheme = null; // Текущая тема (для отслеживания изменений)
 
     function showLoader() {
         // Ищем контейнер tui-loader
@@ -116,6 +118,7 @@ const ARCHIVE_KEY = "cu.lms.archived-statements";
         const rows = document.querySelectorAll("tr[tuitr]");
         const themeData = await browser.storage.sync.get("themeEnabled");
         const isDarkTheme = !!themeData.themeEnabled;
+        currentTheme = isDarkTheme; // Запоминаем текущую тему
 
         for (const row of rows) {
             if (row.querySelector(".lms-archive-btn")) continue;
@@ -152,6 +155,7 @@ const ARCHIVE_KEY = "cu.lms.archived-statements";
 
             const iconUrl = browser.runtime.getURL("icons/archive.svg");
             const iconSpan = document.createElement("span");
+            iconSpan.className = "lms-icon-span"; // Добавляем класс для поиска
             iconSpan.style.cssText = `
                 display: inline-block;
                 width: 100%;
@@ -172,7 +176,8 @@ const ARCHIVE_KEY = "cu.lms.archived-statements";
                 iconSpan.style.backgroundColor = "#1f2937";
             });
             archiveButton.addEventListener("mouseleave", () => {
-                iconSpan.style.backgroundColor = isDarkTheme ? "#FFFFFF" : "#4b5563";
+                const theme = currentTheme !== null ? currentTheme : isDarkTheme;
+                iconSpan.style.backgroundColor = theme ? "#FFFFFF" : "#4b5563";
             });
 
             archiveButton.addEventListener("click", async (e) => {
@@ -324,22 +329,26 @@ const ARCHIVE_KEY = "cu.lms.archived-statements";
 
                 currentView = 'main';
 
+                // Получаем актуальные элементы
+                const currentMainFieldset = document.querySelector("fieldset.t-content");
+                const currentArchivePlaceholder = document.querySelector(".archive-placeholder");
+                const currentArchiveLink = document.querySelector(".archive-link");
+
                 // Показать основную таблицу, скрыть архив
-                if (mainFieldset) {
-                    mainFieldset.style.display = "";
+                if (currentMainFieldset) {
+                    currentMainFieldset.style.display = "";
                 }
 
-                const archivePlaceholder = document.querySelector(".archive-placeholder");
-                if (archivePlaceholder) {
-                    archivePlaceholder.style.display = "none";
+                if (currentArchivePlaceholder) {
+                    currentArchivePlaceholder.style.display = "none";
                 }
 
                 // Визуальное обновление хлебных крошек
                 link.style.color = activeColor;
                 link.classList.add("breadcrumbs__item_last");
-                if (archiveLink) {
-                    archiveLink.style.color = "";
-                    archiveLink.classList.remove("breadcrumbs__item_last");
+                if (currentArchiveLink) {
+                    currentArchiveLink.style.color = "";
+                    currentArchiveLink.classList.remove("breadcrumbs__item_last");
                 }
 
                 // Форсируем повторное применение функционала
@@ -364,6 +373,7 @@ const ARCHIVE_KEY = "cu.lms.archived-statements";
 
         const themeData = await browser.storage.sync.get("themeEnabled");
         const isDarkTheme = !!themeData.themeEnabled;
+        currentTheme = isDarkTheme; // Обновляем текущую тему
 
         const fieldset = document.createElement("fieldset");
         fieldset.setAttribute("_ngcontent-ng-c37613583", "");
@@ -465,6 +475,7 @@ const ARCHIVE_KEY = "cu.lms.archived-statements";
 
                 const iconUrl = browser.runtime.getURL("icons/unarchive.svg");
                 const iconSpan = document.createElement("span");
+                iconSpan.className = "lms-icon-span"; // Добавляем класс для поиска
                 iconSpan.style.cssText = `
           display: inline-block;
           width: 100%;
@@ -486,7 +497,8 @@ const ARCHIVE_KEY = "cu.lms.archived-statements";
                     iconSpan.style.backgroundColor = "#1f2937";
                 });
                 unarchiveButton.addEventListener("mouseleave", () => {
-                    iconSpan.style.backgroundColor = isDarkTheme ? "#FFFFFF" : "#4b5563";
+                    const theme = currentTheme !== null ? currentTheme : isDarkTheme;
+                    iconSpan.style.backgroundColor = theme ? "#FFFFFF" : "#4b5563";
                 });
 
                 unarchiveButton.addEventListener("click", async (e) => {
@@ -524,6 +536,41 @@ const ARCHIVE_KEY = "cu.lms.archived-statements";
         archivePlaceholder.appendChild(fieldset);
     }
 
+    function cleanup() {
+        window.cuLmsLog("[LMS Extension] Cleaning up...");
+
+        // Удаляем архивную ссылку и разделитель
+        const breadcrumbs = document.querySelector("tui-breadcrumbs");
+        if (breadcrumbs) {
+            const archiveLink = breadcrumbs.querySelector(".archive-link");
+            if (archiveLink) {
+                const separator = archiveLink.previousElementSibling;
+                if (separator && separator.tagName === "TUI-ICON") {
+                    separator.remove();
+                }
+                archiveLink.remove();
+            }
+        }
+
+        // Удаляем placeholder архива
+        const archivePlaceholder = document.querySelector(".archive-placeholder");
+        if (archivePlaceholder) {
+            archivePlaceholder.remove();
+        }
+
+        // Удаляем кнопки архивирования
+        document.querySelectorAll(".lms-archive-btn").forEach(btn => btn.remove());
+
+        // Удаляем loader если остался
+        hideLoader();
+
+        // Сбрасываем состояние
+        currentView = 'main';
+        isInitialized = false;
+
+        window.cuLmsLog("[LMS Extension] Cleanup complete");
+    }
+
     async function initialize() {
         if (isInitialized) return;
 
@@ -550,13 +597,38 @@ const ARCHIVE_KEY = "cu.lms.archived-statements";
         window.cuLmsLog("[LMS Extension] Initialization complete");
     }
 
-
-
     function initObserver() {
-        const mainContainer = document.querySelector("main") || document.body;
+        const mainContainer = document.body;
+
         let timeoutId;
 
         const observer = new MutationObserver(() => {
+            // Проверяем, изменился ли путь
+            const newPath = window.location.pathname;
+            if (newPath !== currentPath) {
+                window.cuLmsLog("[LMS Extension] Path changed from", currentPath, "to", newPath);
+                currentPath = newPath;
+
+                // Если ушли со страницы ведомостей - очищаем
+                if (!newPath.includes('/learn/reports/student-performance')) {
+                    cleanup();
+                    return;
+                }
+
+                // Если вернулись на страницу ведомостей - переинициализируем
+                if (newPath.includes('/learn/reports/student-performance')) {
+                    window.cuLmsLog("[LMS Extension] Returned to statements page, reinitializing...");
+                    cleanup();
+                    isInitialized = false;
+                }
+            }
+
+            const breadcrumbsExist = !!document.querySelector("tui-breadcrumbs");
+            if (!breadcrumbsExist && isInitialized) {
+                window.cuLmsLog("[LMS Extension] DOM reset detected, reinitializing...");
+                cleanup();
+            }
+
             if (timeoutId) clearTimeout(timeoutId);
             timeoutId = setTimeout(async () => {
                 // Проверяем, есть ли таблица на странице
@@ -592,4 +664,19 @@ const ARCHIVE_KEY = "cu.lms.archived-statements";
     } else {
         waitForAngularRender();
     }
+
+    // Слушаем изменения темы
+    browser.storage.onChanged.addListener((changes, namespace) => {
+        if (namespace === 'sync' && changes.themeEnabled) {
+            const isDarkTheme = !!changes.themeEnabled.newValue;
+            currentTheme = isDarkTheme;
+
+            // Обновляем цвет всех иконок
+            document.querySelectorAll('.lms-icon-span').forEach(iconSpan => {
+                iconSpan.style.backgroundColor = isDarkTheme ? "#FFFFFF" : "#4b5563";
+            });
+
+            window.cuLmsLog(`[LMS Extension] Theme changed to ${isDarkTheme ? 'dark' : 'light'}, icons updated`);
+        }
+    });
 })();
