@@ -4,21 +4,26 @@
 let currentUrl = location.href;
 
 
-(function() {
+(async function() {
+    const designData = await browser.storage.sync.get('oldCoursesDesignToggle');
+    const useOldDesign = !!designData.oldCoursesDesignToggle;
+
     // Скрываем список курсов сразу при загрузке скрипта чтобы их отредачить
-    const style = document.createElement('style');
-    style.id = 'course-archiver-preload-style';
-    style.textContent = `
-        ul.course-list {
-            opacity: 0 !important;
-            visibility: hidden !important;
-        }
-        ul.course-list.course-archiver-ready {
-            opacity: 1 !important;
-            visibility: visible !important
-        }
-    `;
-    document.head.appendChild(style);
+    if (useOldDesign) {
+      const style = document.createElement('style');
+      style.id = 'course-archiver-preload-style';
+      style.textContent = `
+          ul.course-list {
+              opacity: 0 !important;
+              visibility: hidden !important;
+          }
+          ul.course-list.course-archiver-ready {
+              opacity: 1 !important;
+              visibility: visible !important
+          }
+      `;
+      document.head.appendChild(style);
+    }
 })();
 
 if (document.readyState === 'loading') {
@@ -87,9 +92,9 @@ async function processCourses() {
         if (useOldDesign && typeof simplifyAllCourseCards === 'function') {
             simplifyAllCourseCards();
             observeCourseListChanges();
+            courseList.classList.add('course-archiver-ready');
         }
         
-        courseList.classList.add('course-archiver-ready');
 
     } catch (e) {
         console.log("Course Archiver: Not a course page, or content failed to load in time.", e);
